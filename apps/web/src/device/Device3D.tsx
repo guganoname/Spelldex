@@ -9,7 +9,8 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { animate, useMotionValue } from 'motion/react';
 import { useDrag } from '@use-gesture/react';
 import type * as THREE from 'three';
-import { createCodex, lidEvents, quadToMatrix3d, type Codex, type CodexScreenQuad } from '@spelldex/device-3d';
+import { AgXToneMapping } from 'three';
+import { codexEnvironment, createCodex, lidEvents, quadToMatrix3d, type Codex, type CodexScreenQuad } from '@spelldex/device-3d';
 import { color as colorTokens, motion as motionTokens } from '@spelldex/design/tokens';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
 import { ENTRY_TAB_LABELS, tabForGem, type DeviceButton, type GemIndex } from '@spelldex/shared/contracts';
@@ -27,8 +28,20 @@ function Scene({ codex, progress, onFrame }: {
   progress: ReturnType<typeof useMotionValue<number>>;
   onFrame(camera: THREE.PerspectiveCamera, size: { width: number; height: number }): void;
 }) {
-  const { camera, size, invalidate } = useThree();
+  const { camera, size, invalidate, gl, scene } = useThree();
   const cam = camera as THREE.PerspectiveCamera;
+
+  // Metal needs an environment to reflect; without it brass renders almost black.
+  useEffect(() => {
+    const env = codexEnvironment(gl);
+    scene.environment = env;
+    scene.environmentIntensity = 0.7;
+    invalidate();
+    return () => {
+      scene.environment = null;
+      env.dispose();
+    };
+  }, [gl, scene, invalidate]);
 
   useEffect(() => {
     let last = performance.now();
@@ -62,10 +75,8 @@ function Scene({ codex, progress, onFrame }: {
 
   return (
     <>
-      <ambientLight intensity={0.35} />
-      {/* One light source, top left, like the CSS shell. */}
-      <directionalLight position={[-3, 5, 4]} intensity={2.2} />
-      <directionalLight position={[3, -2, 2]} intensity={0.35} />
+      {/* One warm light source, top left, like the CSS shell. */}
+      <directionalLight position={[-6, 12, 14]} intensity={2.2} color="#ffe7c2" />
       <primitive object={codex.group} />
     </>
   );
@@ -221,7 +232,7 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
         className={css.canvas}
         frameloop="demand"
         dpr={[1, 2]}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
+        gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: AgXToneMapping, toneMappingExposure: 0.92 }}
         camera={{ fov: 30, near: 0.1, far: 100, position: [0, 0, 10] }}
       >
         <Scene codex={codex} progress={progress} onFrame={onFrame} />

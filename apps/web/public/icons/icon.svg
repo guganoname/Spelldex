@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="leather" cx="35%" cy="25%" r="90%"><stop offset="0" stop-color="#3a281d"/><stop offset="1" stop-color="#1b120d"/></radialGradient>
+    <radialGradient id="brass" cx="35%" cy="30%" r="75%"><stop offset="0" stop-color="#f0d394"/><stop offset=".5" stop-color="#b08d57"/><stop offset="1" stop-color="#5e4626"/></radialGradient>
+    <radialGradient id="gem" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff6dc"/><stop offset=".55" stop-color="#f2c86b"/><stop offset="1" stop-color="#8a5a12"/></radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#leather)"/>
+  <circle cx="256" cy="256" r="150" fill="url(#brass)"/>
+  <circle cx="256" cy="256" r="122" fill="none" stroke="#5e4626" stroke-width="6" stroke-dasharray="4 14"/>
+  <circle cx="256" cy="256" r="104" fill="#2b1d16"/>
+  <path d="M256 168 L278 234 L344 256 L278 278 L256 344 L234 278 L168 256 L234 234 Z" fill="url(#gem)"/>
+</svg>
