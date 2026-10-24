@@ -4,7 +4,7 @@ Erkennt Magic-Karten über die Kamera, offline und ohne KI-Modell zur Laufzeit.
 
 ## Ablauf pro Kamerabild (im Worker)
 
-1. **Umriss finden** (OpenCV.js): Graustufen, Canny-Kanten und Otsu-Schwelle, Vierecke mit Kartenformat 63:88, bewertet nach Fläche und Kantenunterstützung auf allen vier Seiten. Danach Subpixel-Verfeinerung: Geraden durch die stärksten Helligkeitssprünge, Schnittpunkte als Ecken.
+1. **Umriss finden** (OpenCV.js): Graustufen, Canny-Kanten, Otsu-Schwelle und eine lokale Schwelle (der dunkle Kartenrand ist dunkler als alles direkt daneben, auch wenn die Karte andere Gegenstände berührt), Vierecke mit Kartenformat 63:88, bewertet nach Fläche und Kantenunterstützung auf allen vier Seiten. Danach Subpixel-Verfeinerung: Geraden durch die stärksten Helligkeitssprünge, Schnittpunkte als Ecken.
 2. **Hypothesen**: Erkennt der Detektor statt des Kartenrands den inneren Rahmen oder die Bildbox, werden die daraus folgenden Außenränder mitgeprüft; ohne Umriss der Führungsrahmen in der Bildmitte. Es gewinnt der beste Treffer, bei einem sicheren Treffer bricht die Suche früh ab.
 3. **Entzerren** auf 488×680 Pixel, das Format der Scryfall-Bilder.
 4. **Fingerabdruck** (`@spelldex/shared/scan`): 256-Bit-pHash über die Illustration, 64-Bit-pHash über die ganze Karte, beide nach Grauwelt-Weißabgleich. Beide Drehrichtungen (Karte steht auf dem Kopf).
@@ -48,6 +48,24 @@ Ein verpasstes Einzelbild ist im Betrieb meist harmlos, weil 8 Bilder pro Sekund
 
 ## Messung mit echten Karten (2026-10-24)
 
+Echte Scryfall-Bilder (Index M10, ISD, DSK: 950 Kartenseiten), fotografiert vom Kamera-Simulator oben, ohne OCR. Gemessen vom Mess-Thread mit `bench/real.ts`, 400 Fotos, Seed 11:
+
+| | richtige Karte | anderer Druck angeboten | mehrdeutig, richtige dabei | falsche Karte | verpasst |
+|---|---|---|---|---|---|
+| vor der lokalen Schwelle | 80,3 % | 0,6 % | 0,9 % | 0,0 % | 18,2 % |
+
+Von den Verpassern fand der Detektor bei gut der Hälfte keinen Umriss: Die Karte berührte Gegenstände ähnlicher Helligkeit, oder sie lag schwarzrandig auf dunklem Tisch und nicht in der Mitte. Die lokale Schwelle behebt das zum großen Teil (`bench/real-misses.ts` mit 100 echten Karten):
+
+| | vorher | nachher |
+|---|---|---|
+| 64 frühere Verpasser: Umriss gefunden | 31 | 55 |
+| 64 frühere Verpasser: jetzt erkannt | 2 | 33 |
+| 300 neue Fotos: richtig / falsch | 75,3 % / 0,0 % | 81,3 % / 0,0 % |
+| 300 neue Fotos: Zeit pro Bild (Median / 95 %) | 46 / 224 ms | 64 / 384 ms |
+
+Die übrigen Verpasser haben meist einen passenden Umriss, aber Abstand 105–120 (Hülle, Spiegelung) und liegen damit knapp über `acceptDistance`. Das ist Sache der Schwellen (unten). `bench/detect-bench.ts` ist ein synthetischer Stresstest nur für die Umrisserkennung (berührende Gegenstände, dunkler Tisch, Karte außerhalb der Mitte).
+
+
 `bench/real.ts` baut den Index genau wie der Daten-Build (MTGJSON-Setdateien → `catalog.db` → Scryfall-„normal“-Bilder → `hashSources`) und schickt echte Kartenbilder durch denselben Kamera-Simulator. Karten aus Sets außerhalb des Index, deren Illustration nicht im Index vorkommt, messen Fehlalarme. Downloads landen in `.data-cache/scan-bench`, Wiederholungen laufen offline. Mehrere Seeds parallel und danach `--from a/rows.json,b/rows.json` zum gemeinsamen Auswerten.
 
 ```
@@ -55,6 +73,8 @@ node --experimental-strip-types bench/real.ts --seed 1 --photos 450 --ocr 1 \
   --sets LEA,ICE,7ED,8ED,RAV,M10,ISD,ZEN,RTR,THS,KLD,DOM,ELD,KHM,MID,NEO,DMU,ONE,MOM,BLB,DSK,FDN,MH3,2XM,DMR,C21 \
   --unknown MIR,TMP,5DN,M19,IKO,LCI,OTJ,DFT,TDM,MKM,WOE
 ```
+
+### Großer Lauf und Schwellen
 
 Index: 26 Sets von Alpha bis Foundations (alte und neue Rahmen, Showcase, Borderless, Doppelseiten, Reprint-Sets), 10.921 Kartenseiten, 725 KB. 3 × 450 Einzelbilder, davon 269 unbekannte Karten, OCR an. Vor #18 (lokale Schwelle im Detektor).
 
@@ -77,4 +97,3 @@ Abstände (von 320): richtige Karte Median 20, 95 % unter 84. Bester Treffer unb
 Nachgerechnet mit um 6 bzw. 10 verschobenen Abständen der unbekannten Karten (Schätzung für 100k): alte Schwellen 0,7 % bzw. 1,1 % Fehlalarme pro Einzelbild, neue 0,0 %; mehrdeutig 0,4 % bzw. 5,6 % (alt 4,8 % bzw. 18,6 %). Kosten: 1,2 Punkte weniger Erkennung pro Einzelbild, falsche Karten 0,3 % → 0,1 %. `report.json` enthält den ganzen Sweep über Schwelle und Abstand.
 
 Die Verpasser sind vor allem fehlende Umrisse (Karte berührt Gegenstände ähnlicher Helligkeit, schwarzer Rand auf dunklem Tisch; dafür #18) und bei gefundenem Umriss Abstände 100–120 durch Hülle und Spiegelung. Simulierte Fotos sind keine echten Handyfotos: die absoluten Quoten sind eine Untergrenze für ruhig gehaltene Karten, die Abstände und Fehlalarme sind belastbarer.
-
