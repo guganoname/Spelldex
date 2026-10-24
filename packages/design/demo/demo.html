@@ -1,0 +1,207 @@
+<title>Spelldex Codex-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap">
+<style>
+/*__TOKENS__*/
+/*__COMPONENTS__*/
+/*__DEMO_CSS__*/
+</style>
+
+<div class="page">
+  <header class="intro">
+    <p class="eyebrow">Spelldex · Designsystem 0.1</p>
+    <h1>Codex-Werkstatt</h1>
+    <p class="lede">Prototyp für Material, Bewegung, Klang und Haptik. Am besten in Safari auf dem iPhone öffnen, Ton laut, Lautlos-Schalter aus.</p>
+  </header>
+
+  <section class="stage" aria-label="Der Codex">
+    <div class="device" id="device" data-open="false">
+
+      <div class="lid" id="lid">
+        <!-- Vorderseite: Deckel geschlossen -->
+        <div class="face face--front">
+          <span class="corner" data-c="tl"></span><span class="corner" data-c="tr"></span>
+          <span class="corner" data-c="bl"></span><span class="corner" data-c="br"></span>
+          <p class="cover-title sd-engraved">Spelldex</p>
+          <button class="seal" id="seal" type="button" aria-label="Siegel brechen und Codex öffnen">
+            <span class="seal__ring"></span>
+            <span class="seal__gems" aria-hidden="true">
+              <i data-gem="W"></i><i data-gem="U"></i><i data-gem="B"></i><i data-gem="R"></i><i data-gem="G"></i>
+            </span>
+          </button>
+          <p class="cover-sub">Codex des Multiversums</p>
+        </div>
+        <!-- Rückseite: Linse, sichtbar wenn offen -->
+        <div class="face face--back">
+          <div class="sd-bezel lens-bezel">
+            <div class="sd-screen lens" id="lens">
+              <div class="lens__feed" id="feed"></div>
+              <span class="sd-bracket" data-c="tl"></span><span class="sd-bracket" data-c="tr"></span>
+              <span class="sd-bracket" data-c="bl"></span><span class="sd-bracket" data-c="br"></span>
+              <div class="mtg" id="mtgcard" aria-label="Shivan Dragon, Karte in der Linse">
+                <div class="mtg__frame">
+                  <div class="mtg__bar"><span>Shivan Dragon</span><span class="pips" aria-label="Manakosten 4 und zwei Rot"><i>4</i><i data-gem="R">R</i><i data-gem="R">R</i></span></div>
+                  <div class="mtg__art" aria-hidden="true"><span class="mtg__sun"></span><span class="mtg__ridge"></span><span class="mtg__wing"></span></div>
+                  <div class="mtg__bar mtg__bar--type"><span>Creature — Dragon</span><span class="set-sym" aria-hidden="true"></span></div>
+                  <div class="mtg__text">Flying<br><span>{R}: Shivan Dragon gets +1/+0 until end of turn.</span></div>
+                  <div class="mtg__pt">5/5</div>
+                </div>
+              </div>
+              <div class="lens__flash" id="flash"></div>
+              <p class="lens__status sd-label" id="lensStatus" aria-live="polite">Linse bereit</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="base" id="base">
+        <div class="hinge" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="sd-bezel info-bezel">
+          <div class="sd-screen info" id="info">
+            <div class="info__head">
+              <div>
+                <p class="sd-label">Rare · Revised Edition</p>
+                <h2 class="card-name">Shivan Dragon</h2>
+              </div>
+              <span class="pips pips--lg" aria-label="Manakosten 4 und zwei Rot"><i>4</i><i data-gem="R">R</i><i data-gem="R">R</i></span>
+            </div>
+            <div class="tabs" role="tablist" aria-label="Eintrag">
+              <button class="sd-gem" role="tab" data-gem="W" aria-selected="true" aria-controls="p-ueb" id="t-ueb"><span class="sd-gem__stone"></span>Übersicht</button>
+              <button class="sd-gem" role="tab" data-gem="U" aria-selected="false" aria-controls="p-markt" id="t-markt"><span class="sd-gem__stone"></span>Markt</button>
+              <button class="sd-gem" role="tab" data-gem="B" aria-selected="false" aria-controls="p-kombo" id="t-kombo"><span class="sd-gem__stone"></span>Kombos</button>
+              <button class="sd-gem" role="tab" data-gem="R" aria-selected="false" aria-controls="p-lore" id="t-lore"><span class="sd-gem__stone"></span>Lore</button>
+              <button class="sd-gem" role="tab" data-gem="G" aria-selected="false" aria-controls="p-drucke" id="t-drucke"><span class="sd-gem__stone"></span>Sammlung</button>
+            </div>
+            <div class="panels">
+              <div class="panel" role="tabpanel" id="p-ueb" aria-labelledby="t-ueb">
+                <p class="rules">Flying<br><b class="pips pips--inline"><i data-gem="R">R</i></b>: Shivan Dragon gets +1/+0 until end of turn.</p>
+                <div class="gauge-row">
+                  <svg class="gauge" viewBox="0 0 120 70" aria-hidden="true">
+                    <path d="M12 62 A48 48 0 0 1 108 62" class="gauge__track"/>
+                    <path d="M12 62 A48 48 0 0 1 108 62" class="gauge__fill" id="gaugeFill" pathLength="100"/>
+                    <g class="gauge__ticks" id="ticks"></g>
+                    <g id="needle" class="gauge__needle"><path d="M60 62 L58 60 L60 20 L62 60 Z"/><circle cx="60" cy="62" r="5"/></g>
+                  </svg>
+                  <div>
+                    <p class="sd-label">Stärke</p>
+                    <p class="big sd-num" id="gaugeVal">0</p>
+                    <p class="note">Beispielwert, Score kommt aus dem Daten-Build</p>
+                  </div>
+                </div>
+              </div>
+              <div class="panel" role="tabpanel" id="p-markt" aria-labelledby="t-markt" hidden>
+                <p class="sd-label">Cardmarket-Trend · Beispieldaten</p>
+                <p class="big sd-num">4,80 €</p>
+                <svg class="spark" id="spark" viewBox="0 0 300 70" preserveAspectRatio="none" aria-label="Preisverlauf 90 Tage, Beispieldaten"></svg>
+                <ul class="sd-list sd-num">
+                  <li><span>Foil</span><span>—</span></li>
+                  <li><span>90-Tage-Tief</span><span>3,90 €</span></li>
+                  <li><span>90-Tage-Hoch</span><span>5,40 €</span></li>
+                </ul>
+              </div>
+              <div class="panel" role="tabpanel" id="p-kombo" aria-labelledby="t-kombo" hidden>
+                <p class="sd-label">Gut in · Beispieldaten</p>
+                <ul class="sd-list">
+                  <li><span>Drachen-Stammesdeck</span><span class="chip">Commander</span></li>
+                  <li><span>Mono-Rot Feuerodem</span><span class="chip">Casual</span></li>
+                  <li><span>Kombos aus Commander Spellbook</span><span class="chip chip--dim">folgt</span></li>
+                </ul>
+              </div>
+              <div class="panel" role="tabpanel" id="p-lore" aria-labelledby="t-lore" hidden>
+                <div class="sd-parchment">
+                  <p class="lore-kicker">Ebene · Dominaria</p>
+                  <p>Shivan-Drachen stammen aus Shiv, einem vulkanischen Kontinent Dominarias. Sie gelten als die Apex-Räuber ihrer Heimat.</p>
+                  <p class="lore-src">Demo-Text · später handgeschrieben mit Quellenlink</p>
+                </div>
+              </div>
+              <div class="panel" role="tabpanel" id="p-drucke" aria-labelledby="t-drucke" hidden>
+                <ul class="sd-list">
+                  <li><span>Besitze ich</span><button class="sd-toggle" role="switch" aria-checked="false" id="own" aria-label="Besitze ich"></button></li>
+                  <li><span>Foil</span><button class="sd-toggle" role="switch" aria-checked="false" id="foil" aria-label="Foil"></button></li>
+                  <li><span>Anzahl</span>
+                    <span class="stepper"><button class="sd-key sd-key--sm" id="minus" aria-label="Eins weniger">−</button><b class="sd-num" id="count">1</b><button class="sd-key sd-key--sm" id="plus" aria-label="Eins mehr">+</button></span>
+                  </li>
+                </ul>
+                <div class="collect-row">
+                  <button class="sd-key" id="stamp">Stempeln</button>
+                  <button class="sd-key" id="complete">Set abschließen</button>
+                  <span class="sd-seal" id="seal2" data-locked>SET</span>
+                  <div class="stampmark" id="stampmark" aria-hidden="true">Gesehen</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="deck">
+          <div class="dpad" aria-label="Steuerkreuz">
+            <button class="dpad__b" data-d="up" aria-label="Hoch"></button>
+            <button class="dpad__b" data-d="left" aria-label="Vorheriger Tab"></button>
+            <button class="dpad__b" data-d="right" aria-label="Nächster Tab"></button>
+            <button class="dpad__b" data-d="down" aria-label="Runter"></button>
+          </div>
+          <button class="sd-key sd-key--round scan" id="scan" aria-label="Scannen"><span class="scan__gem"></span></button>
+          <div class="side-keys">
+            <button class="sd-key" id="back">Zurück</button>
+            <button class="sd-key" id="close">Schließen</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="hint" id="hint">Siegel antippen oder Deckel hochziehen</p>
+  </section>
+
+  <section class="lab" aria-labelledby="lab-h">
+    <h2 id="lab-h">Werkbank</h2>
+
+    <div class="block">
+      <h3>Klang</h3>
+      <p class="muted">Alle Klänge entstehen im Code, keine Audiodateien. Jeder Aufruf wählt eine von vier Varianten und verschiebt die Tonhöhe leicht.</p>
+      <div class="controls">
+        <label class="ctl"><span>Ton</span><button class="sd-toggle" role="switch" aria-checked="true" id="prefSound" aria-label="Ton an"></button></label>
+        <label class="ctl"><span>Haptik</span><button class="sd-toggle" role="switch" aria-checked="true" id="prefHaptics" aria-label="Haptik an"></button></label>
+        <label class="ctl"><span>Auch im Lautlos-Modus</span><button class="sd-toggle" role="switch" aria-checked="false" id="prefPlayback" aria-label="Auch im Lautlos-Modus abspielen"></button></label>
+        <label class="ctl ctl--wide" for="vol"><span>Lautstärke</span><input type="range" id="vol" min="0" max="1" step="0.05" value="0.8"></label>
+      </div>
+      <p class="sd-label rarity-label">Seltenheit für Scan-Treffer</p>
+      <div class="seg" role="radiogroup" aria-label="Seltenheit" id="rarity">
+        <button role="radio" aria-checked="false" data-r="common">Common</button>
+        <button role="radio" aria-checked="false" data-r="uncommon">Uncommon</button>
+        <button role="radio" aria-checked="true" data-r="rare">Rare</button>
+        <button role="radio" aria-checked="false" data-r="mythic">Mythic</button>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="block">
+      <h3>Haptik-Labor</h3>
+      <p class="muted">Prüft, welcher Weg auf deinem iPhone den System-Tick auslöst. Tippe eine Variante an und markiere, ob du etwas gespürt hast. Ergebnisse landen gesammelt bei uns.</p>
+      <dl class="env" id="env"></dl>
+      <ol class="variants" id="variants"></ol>
+      <p class="save-state" id="saveState" aria-live="polite"></p>
+      <h4>Bisherige Messungen</h4>
+      <ul class="results" id="results"><li class="muted">Noch keine Messung gespeichert.</li></ul>
+    </div>
+
+    <div class="block">
+      <h3>Tokens</h3>
+      <div class="swatches" id="swatches"></div>
+      <div class="type-spec">
+        <p class="t-display">Cinzel · Gravuren und Titel</p>
+        <p class="t-lore">Crimson Pro · Regeltext, Flavor und Lore. Flying.</p>
+        <p class="t-ui">Inter · Bedienung und Zahlen <span class="sd-num">0123456789 €</span></p>
+      </div>
+      <div class="springs" id="springs"></div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    <p>Spelldex ist inoffizieller Fan-Content gemäß der Fan Content Policy und nicht von Wizards of the Coast genehmigt oder unterstützt. Teile der verwendeten Materialien sind Eigentum von Wizards of the Coast. © Wizards of the Coast LLC.</p>
+    <p>Haptik auf dem iPhone über <a href="https://github.com/tijnjh/ios-haptics">ios-haptics</a> (MIT, tijnjh). Schriften Cinzel, Crimson Pro und Inter unter SIL Open Font License.</p>
+  </footer>
+</div>
+
+<script>
+/*__DEMO_JS__*/
+</script>
