@@ -3,7 +3,7 @@
  * gunzip straight into OPFS under a versioned name, then swap. A failed or interrupted update
  * never touches the installed catalog.
  */
-import { CATALOG_SCHEMA } from '@spelldex/shared/catalog';
+import { CATALOG_SCHEMA, ensureFts, FTS_BUILD } from '@spelldex/shared/catalog';
 import type { ArtifactFile, CatalogStatus, DataManifest } from '@spelldex/shared/contracts';
 import { importDb, listFiles, openDb, removeFile, type OpenDb, type SqliteEnv } from './sqlite.ts';
 
@@ -50,10 +50,11 @@ export function openInstalled(env: SqliteEnv): { db: OpenDb; version: string } |
       continue;
     }
     try {
-      const db = openDb(env, f, 'r');
+      const db = openDb(env, f);
       const schema = db.get<{ value: string }>(`SELECT value FROM meta WHERE key = 'schema'`)?.value;
       const version = db.get<{ value: string }>(`SELECT value FROM meta WHERE key = 'version'`)?.value;
       if (Number(schema) !== CATALOG_SCHEMA || !version) throw new Error('incompatible');
+      ensureFts(db, FTS_BUILD);
       found = { db, version };
     } catch {
       removeFile(env, f);
@@ -83,6 +84,14 @@ export async function installCatalog(
   if (art.encoding === 'gzip') stream = stream.pipeThrough(new DecompressionStream('gzip') as unknown as TransformStream<Uint8Array, Uint8Array>);
   const reader = stream.getReader();
   await importDb(env, name, async () => (await reader.read()).value);
+  // The shipped file has an empty full-text index; build it once here, in the worker.
+  report({ phase: 'installing', progress: undefined });
+  const db = openDb(env, name);
+  try {
+    ensureFts(db, FTS_BUILD);
+  } finally {
+    db.close();
+  }
   return name;
 }
 

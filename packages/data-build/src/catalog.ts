@@ -4,7 +4,7 @@
  */
 import { DatabaseSync } from 'node:sqlite';
 import {
-  CATALOG_DDL, CATALOG_FINALIZE, CATALOG_SCHEMA, collectorNumberSort, encodeColors,
+  CATALOG_DDL, CATALOG_FINALIZE, CATALOG_SCHEMA, FTS_BUILD, collectorNumberSort, encodeColors,
 } from '@spelldex/shared/catalog';
 import { FORMATS, type CardFace } from '@spelldex/shared/contracts';
 import {
@@ -27,6 +27,8 @@ export interface CatalogInput {
   /** Latest Cardmarket price per MTGJSON uuid, if the price import ran. */
   prices?: Map<string, number>;
   version: string;
+  /** Build the FTS index into the file (tests, tools). The shipped catalog leaves it to the device. */
+  buildFts?: boolean;
 }
 
 export interface CatalogResult {
@@ -217,6 +219,7 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
   insMeta.run('built_at', new Date().toISOString());
   db.exec('COMMIT');
   db.exec(CATALOG_FINALIZE);
+  if (input.buildFts) db.exec(FTS_BUILD);
   db.exec('VACUUM');
   db.close();
   return { stats, uuidToScryfall };
