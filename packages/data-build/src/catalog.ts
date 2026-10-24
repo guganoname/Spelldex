@@ -4,7 +4,7 @@
  */
 import { DatabaseSync } from 'node:sqlite';
 import {
-  CATALOG_DDL, CATALOG_FINALIZE, CATALOG_SCHEMA, FTS_BUILD, collectorNumberSort, encodeColors,
+  CATALOG_DDL, CATALOG_FINALIZE, CATALOG_SCHEMA, DEVICE_BUILD, collectorNumberSort, encodeColors,
 } from '@spelldex/shared/catalog';
 import { FORMATS, type CardFace } from '@spelldex/shared/contracts';
 import {
@@ -220,7 +220,7 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
   insMeta.run('built_at', new Date().toISOString());
   db.exec('COMMIT');
   db.exec(CATALOG_FINALIZE);
-  if (input.buildFts) db.exec(FTS_BUILD);
+  if (input.buildFts) db.exec(DEVICE_BUILD);
   db.exec('VACUUM');
   db.close();
   return { stats, uuidToScryfall };
