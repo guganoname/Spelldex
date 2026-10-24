@@ -76,24 +76,24 @@ node --experimental-strip-types bench/real.ts --seed 1 --photos 450 --ocr 1 \
 
 ### Großer Lauf und Schwellen
 
-Index: 26 Sets von Alpha bis Foundations (alte und neue Rahmen, Showcase, Borderless, Doppelseiten, Reprint-Sets), 10.921 Kartenseiten, 725 KB. 3 × 450 Einzelbilder, davon 269 unbekannte Karten, OCR an. Vor #18 (lokale Schwelle im Detektor).
+Index: 26 Sets von Alpha bis Foundations (alte und neue Rahmen, Showcase, Borderless, Doppelseiten, Reprint-Sets), 10.921 Kartenseiten, 725 KB. 3 × 450 Einzelbilder (gleiche Seeds in beiden Spalten), davon 269 unbekannte Karten, OCR an, neue Schwellen. Vor und nach #18 (lokale Schwelle im Detektor).
 
-| | erkannt (richtige Illustration) | davon anderer Druck | falsche Karte | verpasst |
-|---|---|---|---|---|
-| alle | 74,7 % | 3,6 % | 0,1 % | 25,3 % |
-| leicht | 79,9 % | 2,8 % | 0,2 % | 19,9 % |
-| mittel | 74,9 % | 4,5 % | 0,0 % | 25,2 % |
-| schwer | 63,2 % | 3,4 % | 0,0 % | 36,8 % |
-| in Hülle | 71,6 % | 5,1 % | 0,0 % | 28,4 % |
-| Illustration in mehreren Drucken | 74,5 % | 9,6 % | 0,2 % | 25,3 % |
+| | erkannt vor #18 | erkannt mit #18 | davon anderer Druck | falsche Karte | verpasst |
+|---|---|---|---|---|---|
+| alle | 74,7 % | 84,6 % | 3,4 % | 0,0 % | 15,4 % |
+| leicht | 79,9 % | 87,6 % | 2,8 % | 0,0 % | 12,4 % |
+| mittel | 74,9 % | 85,1 % | 3,3 % | 0,0 % | 14,9 % |
+| schwer | 63,2 % | 77,5 % | 4,9 % | 0,0 % | 22,5 % |
+| in Hülle | 71,6 % | 81,2 % | 3,4 % | 0,0 % | 18,8 % |
+| Illustration in mehreren Drucken | 74,5 % | 82,3 % | 9,1 % | 0,0 % | 17,7 % |
 
-(„erkannt“ = richtiger Druck + anderer Druck angeboten + mehrdeutig mit richtiger Karte unter den Kandidaten.) Unbekannte Karten: 269 von 269 abgelehnt. Zeit pro Bild: Median 137 ms, 95 % unter 275 ms (Node, Index 10.9k, OCR an).
+(„erkannt“ = richtiger Druck + anderer Druck angeboten + mehrdeutig mit richtiger Karte unter den Kandidaten; die drei rechten Spalten mit #18.) Unbekannte Karten: 269 von 269 abgelehnt, vor und nach #18. Zeit pro Bild mit #18: Median 288 ms, 95 % unter 781 ms (vor #18: 137 / 275 ms; Node, drei Läufe parallel auf vier Kernen, Index 10.9k, OCR an).
 
-Abstände (von 320): richtige Karte Median 20, 95 % unter 84. Bester Treffer unbekannter Karten: mindestens 102, Median 114; bei 950 Einträgen waren es 108 und 120. Mit jeder Verzehnfachung des Index rücken unbekannte Karten also um etwa 6 näher, beim vollen Index (~100k) liegen die ersten unter 100. Deshalb die neuen Schwellen:
+Abstände (von 320): richtige Karte Median 20, 95 % unter 86. Bester Treffer unbekannter Karten: mindestens 102 (mit #18: 104), Median 114; bei 950 Einträgen waren es 108 und 120. Mit jeder Verzehnfachung des Index rücken unbekannte Karten also um etwa 6 näher, beim vollen Index (~100k) liegen die ersten unter 100. Deshalb die neuen Schwellen:
 
 - `acceptDistance` 100 → 96, `guideAcceptDistance` 80 → 76
 - neu: oberhalb von `strictAbove` 90 muss der Abstand zur nächsten anderen Illustration mindestens `strictMargin` 24 statt 16 betragen, sonst wird es „mehrdeutig“ (die richtige Karte steht dann unter den Kandidaten)
 
-Nachgerechnet mit um 6 bzw. 10 verschobenen Abständen der unbekannten Karten (Schätzung für 100k): alte Schwellen 0,7 % bzw. 1,1 % Fehlalarme pro Einzelbild, neue 0,0 %; mehrdeutig 0,4 % bzw. 5,6 % (alt 4,8 % bzw. 18,6 %). Kosten: 1,2 Punkte weniger Erkennung pro Einzelbild, falsche Karten 0,3 % → 0,1 %. `report.json` enthält den ganzen Sweep über Schwelle und Abstand.
+Nachgerechnet mit um 6 bzw. 10 verschobenen Abständen der unbekannten Karten (Schätzung für 100k): alte Schwellen 0,7 % bzw. 1,1 % Fehlalarme pro Einzelbild, neue 0,0 %; mehrdeutig 0,4 % bzw. 5,6 % (alt 4,8 % bzw. 18,6 %). Kosten (vor #18 gemessen): 1,2 Punkte weniger Erkennung pro Einzelbild, falsche Karten 0,3 % → 0,1 %. Mit #18: Schätzung für 100k 0,0 % Fehlalarme bei Verschiebung 6 und 10, mehrdeutig 0,0 % bzw. 6,7 %. `report.json` enthält den ganzen Sweep über Schwelle und Abstand.
 
-Die Verpasser sind vor allem fehlende Umrisse (Karte berührt Gegenstände ähnlicher Helligkeit, schwarzer Rand auf dunklem Tisch; dafür #18) und bei gefundenem Umriss Abstände 100–120 durch Hülle und Spiegelung. Simulierte Fotos sind keine echten Handyfotos: die absoluten Quoten sind eine Untergrenze für ruhig gehaltene Karten, die Abstände und Fehlalarme sind belastbarer.
+Vor #18 waren die Verpasser vor allem fehlende Umrisse (Karte berührt Gegenstände ähnlicher Helligkeit, schwarzer Rand auf dunklem Tisch); jetzt bleiben vor allem Abstände 100–120 durch Hülle und Spiegelung. Die Erkennung kostet mit #18 etwa doppelt so viel Zeit pro Bild. Simulierte Fotos sind keine echten Handyfotos: die absoluten Quoten sind eine Untergrenze für ruhig gehaltene Karten, die Abstände und Fehlalarme sind belastbarer.
