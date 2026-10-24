@@ -175,7 +175,7 @@ body {
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { createCodex, codexEnvironment, quadToMatrix3d, lidEvents } from '../src/codex.js';
+import { createCodex, quadToMatrix3d, lidEvents } from '../src/codex.js';
 
 const PANELS = [
   `<span class="sample">Beispieldaten</span>
@@ -245,21 +245,11 @@ async function boot() {
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!window.__capture });
   renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-  renderer.toneMapping = THREE.AgXToneMapping;
-  renderer.toneMappingExposure = 0.92;
   stage.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  scene.environment = codexEnvironment(renderer);
-  scene.environmentIntensity = 0.7;
-  const key = new THREE.DirectionalLight('#ffe7c2', 2.2);
-  key.position.set(-6, 12, 14); // top left, as in the design system
-  scene.add(key);
-  const fill = new THREE.DirectionalLight('#9fb4ff', 0.25);
-  fill.position.set(8, -4, 6);
-  scene.add(fill);
-
   const codex = createCodex();
+  codex.stage(scene, renderer);
   scene.add(codex.group);
   const camera = new THREE.PerspectiveCamera(26, 1, 0.5, 200);
   window.__codex = codex; window.__scene = scene; window.__THREE = THREE; window.__renderer = renderer; window.__camera = camera;

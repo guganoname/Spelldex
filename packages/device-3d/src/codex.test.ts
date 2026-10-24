@@ -23,3 +23,17 @@ describe('lidEvents', () => {
     expect(lidEvents(0.45, 0.3)).toEqual([]);
   });
 });
+
+describe('tokensFromDesign', () => {
+  it('maps design material names and mana colors', async () => {
+    const { tokensFromDesign } = await import('./codex.js');
+    const t = tokensFromDesign({
+      color: { mana: { R: '#d4462f' } },
+      material: { bronze: { color: '#7a5a34', metalness: 1, roughness: 0.5 } },
+      gem: { emissiveIntensity: { rest: 0.1, active: 1 } },
+    });
+    expect(t.gem?.R?.color).toBe('#d4462f');
+    expect(t.material?.bronzeDark?.color).toBe('#7a5a34');
+    expect(t.emissiveIntensity?.active).toBe(1);
+  });
+});
