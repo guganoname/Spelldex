@@ -18,7 +18,9 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # The first scan index build hashes every card image (~110k, rate-limited: about 2 h).
+    # Later runs reuse the cached index and only fetch new prints.
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -47,6 +49,14 @@ jobs:
           curl -fsSL --retry 4 -o sources/AllPrices.json.gz https://mtgjson.com/api/v5/AllPrices.json.gz
           curl -fsSL --retry 4 --compressed -o sources/variants.json https://json.commanderspellbook.com/variants.json
 
+      # Previous scan index (rolling cache): each run restores the newest and saves its own.
+      - name: Scan-Index (vorheriger)
+        uses: actions/cache/restore@v4
+        with:
+          path: scan-cache
+          key: scan-index-${{ github.run_id }}
+          restore-keys: scan-index-
+
       - name: Daten bauen
         env:
           NODE_OPTIONS: --max-old-space-size=5500
@@ -56,6 +66,18 @@ jobs:
           --prices sources/AllPrices.json.gz
           --spellbook sources/variants.json
           --out apps/web/public/data
+          --scan-previous scan-cache/scan-index.bin
+
+      - name: Scan-Index merken
+        id: scan
+        run: |
+          f=$(node -p "require('./apps/web/public/data/manifest.json').artifacts.scanIndex?.path ?? ''")
+          if [ -n "$f" ]; then mkdir -p scan-cache && cp "apps/web/public/data/$f" scan-cache/scan-index.bin && echo "built=1" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.scan.outputs.built == '1'
+        uses: actions/cache/save@v4
+        with:
+          path: scan-cache
+          key: scan-index-${{ github.run_id }}
 
       - name: App bauen
         env:
