@@ -3,12 +3,13 @@
  * Ohne window/AudioContext (SSR, Vitest mit jsdom) ist alles ein No-op.
  */
 import { EVENTS, type FeedbackEvent, type FeedbackOptions } from "./events";
-import { canVibrate, isIOS, setHapticsEnabled, vibrate } from "./haptics";
+import { canVibrate, iosPlayPattern, isIOS, setHapticsEnabled, setIosHapticMode, vibrate, type IosHapticMode } from "./haptics";
 import { SoundEngine, type AudioSessionMode } from "./sound";
 
 export type { FeedbackEvent, FeedbackOptions, GemColor, Rarity, EventSpec } from "./events";
 export { EVENTS, FEEDBACK_EVENTS } from "./events";
 export { hapticTarget, isIOS, canVibrate } from "./haptics";
+export type { IosHapticMode } from "./haptics";
 export type { AudioSessionMode } from "./sound";
 
 export interface FeedbackPrefs {
@@ -18,10 +19,12 @@ export interface FeedbackPrefs {
   volume: number;
   /** 'ambient' respektiert den Lautlos-Schalter des iPhones */
   audioSession: AudioSessionMode;
+  /** iPhone: 'tap' nur Element-Tick, 'hybrid' zusätzlich Muster per Code (Standard) */
+  iosHaptics: IosHapticMode;
 }
 
 const engine = new SoundEngine();
-const prefs: FeedbackPrefs = { sound: true, haptics: true, volume: 0.8, audioSession: "ambient" };
+const prefs: FeedbackPrefs = { sound: true, haptics: true, volume: 0.8, audioSession: "ambient", iosHaptics: "hybrid" };
 const lastFired = new Map<FeedbackEvent, number>();
 type Listener = (event: FeedbackEvent, opts: FeedbackOptions) => void;
 const listeners = new Set<Listener>();
@@ -54,7 +57,12 @@ export function feedback(event: FeedbackEvent, opts: FeedbackOptions = {}): void
     const p = typeof spec.android === "function" ? spec.android(opts) : spec.android;
     vibrate(p);
   }
-  // iOS: der Tick kam bereits vom Element (hapticTarget). Ereignisse ohne Tap bleiben ohne Haptik.
+  // iOS: der erste Tick kommt vom Element (hapticTarget); im Hybrid-Modus ergänzt der Code
+  // Muster und Ticks für Ereignisse kurz nach einem Tap (z. B. Scan-Treffer).
+  if (prefs.haptics && isIOS && spec.iosPattern) {
+    const p = typeof spec.iosPattern === "function" ? spec.iosPattern(opts) : spec.iosPattern;
+    iosPlayPattern(p, spec.ios === "tap");
+  }
   for (const l of listeners) l(event, opts);
 }
 
@@ -73,6 +81,7 @@ export function setFeedbackPrefs(p: Partial<FeedbackPrefs>): void {
   engine.enabled = prefs.sound;
   engine.setVolume(prefs.volume);
   if (p.haptics !== undefined) setHapticsEnabled(prefs.haptics);
+  if (p.iosHaptics) setIosHapticMode(p.iosHaptics);
   if (p.audioSession && hasRuntime()) engine.setSessionMode(prefs.audioSession);
 }
 

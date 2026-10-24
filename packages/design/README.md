@@ -33,7 +33,7 @@ Ohne `window` (SSR, Vitest/jsdom) sind alle Feedback-Funktionen No-ops.
 | `src/feedback/events.ts` | Vertrag: `FeedbackEvent`, `FeedbackOptions`, Tabelle `EVENTS` (Klang, Android-Muster, iPhone-Tap ja/nein, Entprellung). |
 | `src/feedback/recipes.ts`, `dsp.ts` | 31 Klänge, rein im Code synthetisiert (Messing, Leder, Pergament, Kristallglas, Chor). Keine Audiodateien, keine Lizenzfragen. 4 Varianten pro Klang, ±3 % Tonhöhe. |
 | `src/feedback/sound.ts` | Web-Audio-Engine: erste Variante sofort, Rest im Leerlauf; `audioSession` ambient/playback. |
-| `src/feedback/haptics.ts` | `hapticTarget` (ios-haptics 3.2.0), `vibrate` (Android). Experimentell: Tick per Code für das Testlabor. |
+| `src/feedback/haptics.ts` | `hapticTarget` (ios-haptics 3.2.0), `vibrate` (Android), iPhone-Hybrid-Modus: Muster und Ticks kurz nach einem Tap per Code (`iosPlayPattern`). |
 | `src/motion/spring.ts` | Unterbrechbarer Federlöser, `springToCss`. |
 | `demo/` | Werkstatt-Demo (`npm run demo` baut `demo/codex-werkstatt.html`). |
 | `scripts/sound-report.mjs` | Rendert alle Klänge in Node, zeigt Pegel/Länge; `--wav` schreibt WAVs nach `out/`. |
@@ -51,6 +51,10 @@ Ohne `window` (SSR, Vitest/jsdom) sind alle Feedback-Funktionen No-ops.
 
 `material.brass|bronze|leather|obsidian|parchment` = `{color (sRGB), metalness, roughness, clearcoat?}`, `gem.emissiveIntensity.rest|active`.
 Animationsereignisse des Deckels: `feedback('latch-release')` beim Siegel-Tap, `'lid-detent'` bei 40 %, `'lid-settle'` am Endanschlag.
+
+## iPhone-Haptik: Hybrid-Modus
+
+Standard ist `setFeedbackPrefs({ iosHaptics: "hybrid" })`. Der erste Tick jedes Taps kommt weiter vom Overlay-Schalter (`hapticTarget`), das ist die Rückfallebene. Zusätzlich spielt der Code die weiteren Ticks eines Musters (`EVENTS[*].iosPattern`, z. B. Mythic-Treffer 4 Ticks) und Ticks für Ereignisse kurz nach einer Berührung (Scan-Treffer, Deckel rastet), solange iOS das noch als Nutzeraktion wertet (`navigator.userActivation` bzw. 1 s nach dem letzten Tap). Gemessen am 24.10.2026 auf iOS 18.6.2: Einzeltick, 3er-Muster und 350 ms Verzögerung greifen. Sperrt ein iOS-Update den Weg per Code, bleibt der Overlay-Tick erhalten; `"tap"` schaltet die Ergänzungen ganz ab.
 
 ## Bekannte offene Punkte
 

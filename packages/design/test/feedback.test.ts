@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { feedback, unlockFeedback, FEEDBACK_EVENTS, EVENTS } from "../src/feedback/index";
+import { feedback, unlockFeedback, FEEDBACK_EVENTS, EVENTS, setFeedbackPrefs, getFeedbackPrefs } from "../src/feedback/index";
 import { RECIPES } from "../src/feedback/recipes";
 import { mulberry32 } from "../src/feedback/dsp";
 import { springToCss, sampleSpring } from "../src/motion/spring";
@@ -9,6 +9,26 @@ describe("feedback ohne Browser", () => {
   it("ist ein No-op und wirft nicht", async () => {
     for (const ev of FEEDBACK_EVENTS) expect(() => feedback(ev, { gem: "U", rarity: "mythic" })).not.toThrow();
     await expect(unlockFeedback()).resolves.toBeUndefined();
+  });
+});
+
+describe("iPhone-Muster", () => {
+  it("beginnen bei 0, steigen an und bleiben unter einer Sekunde", () => {
+    for (const ev of FEEDBACK_EVENTS) {
+      const spec = EVENTS[ev].iosPattern;
+      if (!spec) continue;
+      for (const rarity of ["common", "uncommon", "rare", "mythic"] as const) {
+        const p = typeof spec === "function" ? spec({ rarity }) : spec;
+        expect(p[0], ev).toBe(0);
+        for (let i = 1; i < p.length; i++) expect(p[i]!, ev).toBeGreaterThan(p[i - 1]!);
+        expect(p.at(-1)!, ev).toBeLessThan(1000);
+      }
+    }
+  });
+  it("Prefs-Umschaltung ist ohne Browser ein No-op", () => {
+    expect(() => setFeedbackPrefs({ iosHaptics: "tap" })).not.toThrow();
+    expect(getFeedbackPrefs().iosHaptics).toBe("tap");
+    setFeedbackPrefs({ iosHaptics: "hybrid" });
   });
 });
 

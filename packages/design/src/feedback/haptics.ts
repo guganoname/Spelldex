@@ -46,10 +46,43 @@ export function vibrate(pattern: number | number[]): boolean {
   }
 }
 
-/* ---------- Experimentell: Tick per Code (nur im Testlabor) ----------
- * Klickt ein verstecktes <label> für einen Schalter an. Ob iOS darauf einen
- * Tick gibt, hängt davon ab, ob der Aufruf noch als Nutzeraktion zählt
- * (WebKit Bug 285120). Wird im Demo-Labor auf echten iPhones gemessen. */
+/* ---------- Tick per Code (Hybrid-Modus) ----------
+ * Klickt ein verstecktes <label> für einen Schalter an. iOS gibt den Tick nur,
+ * solange der Aufruf noch als Nutzeraktion zählt (WebKit Bug 285120).
+ * Gemessen auf iOS 18.6.2: Einzeltick, Muster und 350 ms Verzögerung greifen.
+ * Der Tick des Overlays (hapticTarget) bleibt immer die Rückfallebene. */
+
+export type IosHapticMode = "tap" | "hybrid";
+
+let iosMode: IosHapticMode = "hybrid";
+let lastGesture = -Infinity;
+let tracking = false;
+/** So lange nach der letzten Berührung darf der Code noch ticken */
+const ACTIVATION_MS = 1000;
+
+function trackGestures() {
+  if (tracking || !hasDom) return;
+  tracking = true;
+  const mark = () => (lastGesture = performance.now());
+  for (const t of ["pointerup", "touchend", "click", "keydown"]) document.addEventListener(t, mark, { capture: true, passive: true });
+}
+trackGestures();
+
+/** 'tap': nur der Tick des berührten Elements. 'hybrid': zusätzlich Muster und Ticks kurz nach einem Tap per Code. */
+export function setIosHapticMode(mode: IosHapticMode) {
+  iosMode = mode;
+}
+
+export function iosHapticMode(): IosHapticMode {
+  return iosMode;
+}
+
+/** Ob iOS einen Tick per Code gerade noch als Nutzeraktion werten dürfte. */
+export function withinActivation(): boolean {
+  if (!hasDom) return false;
+  const ua = (navigator as Navigator & { userActivation?: { isActive: boolean } }).userActivation;
+  return (ua?.isActive ?? false) || performance.now() - lastGesture < ACTIVATION_MS;
+}
 
 let hidden: { label: HTMLLabelElement; input: HTMLInputElement } | null = null;
 
@@ -68,16 +101,26 @@ function hiddenSwitch() {
   return hidden;
 }
 
-/** Ein Tick per Code. Muss synchron in einem Tap-Handler laufen, sonst wirkungslos. */
+/** Ein Tick per Code. Wirkt nur kurz nach einem echten Tap. */
 export function iosTickProgrammatic(): void {
   if (!hasDom || !enabled) return;
   hiddenSwitch().label.click();
 }
 
-/** Mehrere Ticks hintereinander (Muster). Ob das ab dem zweiten Tick greift, ist offen. */
+/** Mehrere Ticks hintereinander (ms ab jetzt). */
 export function iosPatternProgrammatic(delaysMs: number[]): void {
   for (const d of delaysMs) {
-    if (d === 0) iosTickProgrammatic();
+    if (d <= 0) iosTickProgrammatic();
     else setTimeout(iosTickProgrammatic, d);
   }
+}
+
+/**
+ * Spielt ein Muster im Hybrid-Modus. fromTap: der erste Tick kam schon vom
+ * Element, also nur die weiteren. Ohne frische Nutzeraktion passiert nichts.
+ */
+export function iosPlayPattern(pattern: number[], fromTap: boolean): void {
+  if (!isIOS || !enabled || iosMode !== "hybrid" || !withinActivation()) return;
+  const delays = fromTap ? pattern.filter((d) => d > 0) : pattern;
+  if (delays.length) iosPatternProgrammatic(delays);
 }
