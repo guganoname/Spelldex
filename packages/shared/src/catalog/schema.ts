@@ -67,7 +67,9 @@ CREATE TABLE printing (
   is_promo         INTEGER NOT NULL DEFAULT 0,
   is_variant       INTEGER NOT NULL DEFAULT 0,
   has_back_face    INTEGER NOT NULL DEFAULT 0,
-  cardmarket_id    INTEGER
+  cardmarket_id    INTEGER,
+  -- Scryfall illustration id: prints sharing artwork share it (scanner reprint groups).
+  illustration_id  TEXT
 ) WITHOUT ROWID;
 CREATE INDEX printing_oracle ON printing(oracle_id);
 CREATE INDEX printing_set ON printing(set_code, number_sort, collector_number);

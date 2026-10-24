@@ -17,6 +17,7 @@ def card(set_code, number, name, *, mana=None, mv=0, type_, text=None, colors=()
         "rarity": rarity, "artist": artist, "legalities": legal, "finishes": list(finishes), "keywords": list(keywords),
         "manaValue": mv, "setCode": set_code, "availability": ["paper"], "isPromo": promo,
         "identifiers": {"scryfallId": uid('scry', set_code, number), "scryfallOracleId": uid('oracle', oname),
+                        "scryfallIllustrationId": uid('art', oname, artist or ''),
                         "mcmId": str(zlib.crc32((set_code + number).encode()) % 900000 + 1000)},
     }
     if mana: c["manaCost"] = mana

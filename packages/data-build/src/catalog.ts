@@ -72,8 +72,8 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
   );
   const insPrint = db.prepare(
     `INSERT OR IGNORE INTO printing (scryfall_id, oracle_id, set_code, collector_number, number_sort,
-       rarity, artist, flavor_text, frame_version, finishes, is_promo, is_variant, has_back_face, cardmarket_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       rarity, artist, flavor_text, frame_version, finishes, is_promo, is_variant, has_back_face, cardmarket_id, illustration_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   const oracles = new Map<string, OracleAcc>();
@@ -115,6 +115,7 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
         joinFaces(faces, (f) => f.flavorText, '\n'),
         c.frameVersion ?? null, JSON.stringify(c.finishes ?? []), c.isPromo ? 1 : 0, isVariant ? 1 : 0,
         BACK_FACE_LAYOUTS.has(c.layout) ? 1 : 0, c.identifiers.mcmId ? Number(c.identifiers.mcmId) : null,
+        c.identifiers.scryfallIllustrationId ?? null,
       );
       stats.printings++;
       for (const f of faces) uuidToScryfall.set(f.uuid, sid);

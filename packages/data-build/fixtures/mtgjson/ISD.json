@@ -43,6 +43,7 @@
     "identifiers": {
      "scryfallId": "3ecd7f2e-4da0-5290-aea1-4c365ffa8805",
      "scryfallOracleId": "d8f1b1ed-b23f-50c4-9827-99c427278f0d",
+     "scryfallIllustrationId": "895add9f-230e-5b72-8bdb-3c95202c6256",
      "mcmId": "33177"
     },
     "manaCost": "{U}",
@@ -98,6 +99,7 @@
     "identifiers": {
      "scryfallId": "3ecd7f2e-4da0-5290-aea1-4c365ffa8805",
      "scryfallOracleId": "d8f1b1ed-b23f-50c4-9827-99c427278f0d",
+     "scryfallIllustrationId": "895add9f-230e-5b72-8bdb-3c95202c6256",
      "mcmId": "33177"
     },
     "text": "Flying",
@@ -141,6 +143,7 @@
     "identifiers": {
      "scryfallId": "e03b3b21-1002-5d20-bc2a-b58df2686b9c",
      "scryfallOracleId": "239db466-5c25-5e3c-bdb7-747eafb00c97",
+     "scryfallIllustrationId": "77708668-6396-5931-a220-ceb8a3045722",
      "mcmId": "875489"
     },
     "manaCost": "{G}",
