@@ -71,8 +71,7 @@ CREATE TABLE printing (
   -- Scryfall illustration id: prints sharing artwork share it (scanner reprint groups).
   illustration_id  TEXT
 ) WITHOUT ROWID;
-CREATE INDEX printing_oracle ON printing(oracle_id);
-CREATE INDEX printing_set ON printing(set_code, number_sort, collector_number);
+-- printing_oracle and printing_set are built on the device (DEVICE_BUILD).
 
 CREATE TABLE oracle_tag (
   tag       TEXT NOT NULL,
@@ -103,17 +102,21 @@ CREATE VIRTUAL TABLE oracle_fts USING fts5(
 `;
 
 /**
- * Run after all oracle rows are inserted. The full-text index is NOT built here: it is about a
- * third of the file, so the shipped catalog leaves it empty and the device builds it once after
- * install (ensureFts). Pass buildFts for builds that are queried directly (tests, tools).
+ * Run after all oracle rows are inserted. The full-text index and the printing indexes are NOT
+ * built here: together they are about half of the file, so the shipped catalog leaves them out
+ * and the device builds them once after install (ensureFts + DEVICE_BUILD). Pass buildFts for
+ * builds that are queried directly (tests, tools).
  */
 export const CATALOG_FINALIZE = /* sql */ `
 UPDATE sets SET printing_count = (SELECT COUNT(*) FROM printing p WHERE p.set_code = sets.code);
 ANALYZE;
 `;
 
-export const FTS_BUILD = /* sql */ `
+export const DEVICE_BUILD = /* sql */ `
+CREATE INDEX IF NOT EXISTS printing_oracle ON printing(oracle_id);
+CREATE INDEX IF NOT EXISTS printing_set ON printing(set_code, number_sort, collector_number);
 INSERT INTO oracle_fts(oracle_fts) VALUES ('rebuild');
 INSERT INTO oracle_fts(oracle_fts) VALUES ('optimize');
+ANALYZE;
 INSERT OR REPLACE INTO meta (key, value) VALUES ('fts', 'ready');
 `;
