@@ -1,0 +1,8 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`phash > matches the golden hashes 1`] = `
+{
+  "art": "a235a5b4730ada378cf57a4bf1aa05c8a5bc0fc98cf525aaf32a05dc9a55730a",
+  "full": "fd182c182d587d2f",
+}
+`;

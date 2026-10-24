@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Spelldex Scanner-Test</title>
+    <style>
+      body { margin: 0; background: #0f0d12; color: #eee; font: 15px system-ui, sans-serif; }
+      main { max-width: 640px; margin: 0 auto; padding: 16px; }
+      .lens { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 12px; overflow: hidden; }
+      video, svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+      svg polygon { fill: none; stroke: #e6c36a; stroke-width: 4; }
+      button { font: inherit; padding: 10px 16px; border-radius: 8px; border: 0; margin: 12px 8px 0 0; }
+      #status { margin-top: 12px; min-height: 3em; white-space: pre-line; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Scanner-Test</h1>
+      <p>Index-URL per <code>?index=…</code> (Standard: <code>/data/scan-index.bin</code>).</p>
+      <div class="lens">
+        <video id="video" playsinline muted></video>
+        <svg id="overlay" preserveAspectRatio="none"><polygon id="quad" points="" /></svg>
+      </div>
+      <button id="start">Kamera starten</button><button id="torch" hidden>Taschenlampe</button>
+      <div id="status">Bereit.</div>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
