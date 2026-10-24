@@ -1,0 +1,15 @@
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+body {
+  background: #0b0a0d;
+  color: var(--sd-screen-ink);
+  font-family: var(--sd-font-ui);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+button { font: inherit; color: inherit; }
+input { font: inherit; user-select: text; -webkit-user-select: text; }
+:focus-visible { outline: 2px solid var(--sd-rune-glow); outline-offset: 2px; }

@@ -3,12 +3,11 @@
  * Shape: data[uuid].paper.cardmarket = { currency: 'EUR', retail: { normal: {date: eur}, foil: {...} } }
  * Output: price shards keyed by the first two hex chars of the Scryfall id (PriceHistoryShard).
  */
-import { createReadStream } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { createGunzip } from 'node:zlib';
 import { join } from 'node:path';
 import type { PriceHistoryShard, PriceSeries, ShardedArtifact } from '@spelldex/shared/contracts';
 import { shardKey } from '@spelldex/shared/contracts';
+import { streamJson } from './streams.ts';
 
 type DatePrices = Record<string, number>;
 export interface RawPrices { normal?: DatePrices; foil?: DatePrices }
@@ -16,20 +15,32 @@ export interface RawPrices { normal?: DatePrices; foil?: DatePrices }
 interface CardmarketEntry { currency?: string; retail?: { normal?: DatePrices; foil?: DatePrices } }
 type AllPricesValue = { paper?: { cardmarket?: CardmarketEntry } };
 
-export async function readAllPrices(path: string): Promise<Map<string, RawPrices>> {
-  const [{ default: StreamChain }, { parser }, { pick }, { streamObject }] = await Promise.all([
-    import('stream-chain'),
-    import('stream-json'),
-    import('stream-json/filters/Pick.js'),
-    import('stream-json/streamers/StreamObject.js'),
-  ]);
-  const stages: unknown[] = [createReadStream(path)];
-  if (path.endsWith('.gz')) stages.push(createGunzip());
-  stages.push(parser(), pick({ filter: 'data' }), streamObject());
+/**
+ * Streams AllPrices and keeps a thinned series per uuid: weekly points counted back from the
+ * newest day (plenty for a sparkline, ~7x smaller than daily data).
+ */
+export async function readAllPrices(path: string, stepDays = 7): Promise<Map<string, RawPrices>> {
   const out = new Map<string, RawPrices>();
-  for await (const { key, value } of StreamChain.chain(stages as never) as AsyncIterable<{ key: string; value: AllPricesValue }>) {
+  for await (const { key, value } of streamJson<AllPricesValue>(path, 'data', 'object')) {
     const retail = value.paper?.cardmarket?.retail;
-    if (retail && (retail.normal || retail.foil)) out.set(key, { normal: retail.normal, foil: retail.foil });
+    if (!retail || (!retail.normal && !retail.foil)) continue;
+    const p: RawPrices = {};
+    if (retail.normal) p.normal = thin(retail.normal, stepDays);
+    if (retail.foil) p.foil = thin(retail.foil, stepDays);
+    out.set(String(key), p);
+  }
+  return out;
+}
+
+export function thin(series: DatePrices, stepDays: number): DatePrices {
+  const dates = Object.keys(series).sort();
+  const last = dates.at(-1);
+  if (!last) return {};
+  const end = Date.parse(last);
+  const out: DatePrices = {};
+  for (const d of dates) {
+    const back = Math.round((end - Date.parse(d)) / 86_400_000);
+    if (back % stepDays === 0) out[d] = series[d]!;
   }
   return out;
 }

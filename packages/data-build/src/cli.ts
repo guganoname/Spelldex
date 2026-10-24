@@ -8,11 +8,13 @@ import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
-import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { MANIFEST_SCHEMA, type DataManifest } from '@spelldex/shared/contracts';
 import { CATALOG_SCHEMA } from '@spelldex/shared/catalog';
-import { DEFAULT_RULES, DEFAULT_SCORE, parseSpellbookVariants, type RuleSet, type ScoreConfig } from '@spelldex/shared/rules';
+import {
+  DEFAULT_RULES, DEFAULT_SCORE, makeSpellbookIndexer, type RuleSet, type ScoreConfig, type SpellbookVariant,
+} from '@spelldex/shared/rules';
+import { streamJson } from './streams.ts';
 import { readMtgjsonSets } from './mtgjson.ts';
 import { buildCatalog } from './catalog.ts';
 import { bundleLore } from './lore.ts';
@@ -40,6 +42,13 @@ async function readJsonIf<T>(path: string): Promise<T | undefined> {
   return existsSync(path) ? (JSON.parse(await readFile(path, 'utf8')) as T) : undefined;
 }
 
+/** Streams Commander Spellbook's variants.json (~700 MB) into the indexer. */
+async function readSpellbook(path: string) {
+  const ix = makeSpellbookIndexer({ top: 5 });
+  for await (const { value } of streamJson<SpellbookVariant>(path, 'variants', 'array')) ix.addVariant(value);
+  return ix.finish();
+}
+
 async function main() {
   if (!args.mtgjson) throw new Error('--mtgjson <AllPrintings.json[.gz] | dir of set files> is required');
   const out = resolve(args.out!);
@@ -53,8 +62,9 @@ async function main() {
   const lore = await bundleLore(args.lore!);
   log(`lore: ${lore ? `${lore.entries.length} entries` : 'none'}`);
 
-  const combos = args.spellbook ? parseSpellbookVariants(JSON.parse(await readFile(args.spellbook, 'utf8'))) : undefined;
-  log(`combos: ${combos ? `${combos.size} cards with combos` : 'none'}`);
+  let combos: Awaited<ReturnType<typeof readSpellbook>> | undefined;
+  if (args.spellbook) combos = await readSpellbook(args.spellbook);
+  log(`combos: ${combos ? `${combos.combos.size} cards with combos` : 'none'}`);
 
   const rawPrices = args.prices ? await readAllPrices(args.prices) : undefined;
   const latest = rawPrices
@@ -64,10 +74,11 @@ async function main() {
 
   const dbPath = join(out, 'catalog.db');
   await rm(dbPath, { force: true });
-  const stats = await buildCatalog(dbPath, {
+  const { stats, uuidToScryfall } = await buildCatalog(dbPath, {
     sets: readMtgjsonSets(args.mtgjson),
     setPlanes: lore?.setPlanes,
-    combos,
+    combos: combos?.combos,
+    comboCounts: combos?.counts,
     rules,
     score,
     prices: latest,
@@ -91,10 +102,7 @@ async function main() {
   if (lore) manifest.artifacts.lore = await writeArtifact(out, 'lore.json', Buffer.from(JSON.stringify(lore)));
 
   if (rawPrices) {
-    const db = new DatabaseSync(dbPath, { readOnly: true });
-    const rows = db.prepare('SELECT mtgjson_uuid, scryfall_id FROM printing').all() as { mtgjson_uuid: string; scryfall_id: string }[];
-    db.close();
-    manifest.artifacts.priceHistory = await writePriceShards(out, rawPrices, new Map(rows.map((r) => [r.mtgjson_uuid, r.scryfall_id])));
+    manifest.artifacts.priceHistory = await writePriceShards(out, rawPrices, uuidToScryfall);
     log(`price shards: ${manifest.artifacts.priceHistory.count}`);
   }
 

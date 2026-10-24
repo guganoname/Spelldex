@@ -30,12 +30,15 @@ React 19.3, Vite 8, Vitest 5, three 0.186, @react-three/fiber 9.8, drei 10.7, @r
 ```
 MTGJSON AllPrintings + AllPrices, Spellbook variants, packages/lore/content
    └─ packages/data-build (nächtlich in CI)
-        ├─ catalog.db.gz     SQLite + FTS5, Schema: packages/shared/src/catalog/schema.ts
-        ├─ prices/<xx>.json  90-Tage-Verlauf je Druck, xx = erste 2 Hex der scryfallId (PriceHistoryShard)
-        ├─ lore.json         LoreBundle (contracts/lore.ts)
+        ├─ catalog.<hash>.db.gzip  SQLite + FTS5, Schema: packages/shared/src/catalog/schema.ts
+        ├─ prices/<xx>.json        90-Tage-Verlauf in Wochenpunkten je Druck, xx = erste 2 Hex der scryfallId
+        ├─ lore.<hash>.json        LoreBundle (contracts/lore.ts)
         ├─ scan-index.bin    vom Scanner-Team (Format siehe unten)
         └─ manifest.json     DataManifest (contracts/manifest.ts), mit sha256 je Artefakt
 App: Daten-Worker lädt manifest.json, prüft sha256, installiert catalog.db im OPFS (opfs-sahpool).
+Artefakte tragen den Inhalts-Hash im Namen (unbegrenzt cachebar). Gzip-Dateien enden auf ".gzip",
+nicht ".gz", weil Server bei ".gz" oft Content-Encoding setzen und der Browser dann vor der
+Prüfsummen-Kontrolle entpackt.
 Scryfall nur direkt vom Gerät: Bilder (cards.scryfall.io) und Tagespreise, 24 h gecacht.
 ```
 
@@ -65,6 +68,13 @@ Worker `./worker` per Comlink mit `ScanWorkerApi`, `./camera` für getUserMedia/
 ## Daten/Lore
 
 `packages/shared/src/rules/index.ts`: `tagRules(rules) → (card) → string[]`, `makeStrengthScorer(cfg, maxEdhrecRank) → (input) → StrengthScore`, `parseSpellbookVariants(doc) → Map<oracleId, ComboRef[]>`. Configs in `rules/config/archetype-rules.json` und `score-weights.json`. Lore-Inhalte: `packages/lore/content/{planes,creature-types,characters,events}/<id>.json`, `set-planes.json`, optional `character-cards.json`. Der Daten-Build validiert streng.
+
+## App: Andockpunkte
+
+- Geräte-Hülle: `apps/web/src/device/types.ts` (DeviceShell). Hülle rendert zwei DOM-Flächen per `useSlotRef('top'|'bottom')`, Bildschirme rendern mit `<TopScreen>`/`<BottomScreen>` hinein. Tasten gehen per `emitButton()` raus, Bildschirme reagieren mit `useDeviceButton()`. 2D-Hülle: `Device2D.tsx`, 3D-Host: `Device3D.tsx`.
+- Gerätezustand (offen, Farbakzent, aktiver Edelstein, Einstellungen): `apps/web/src/state/device.ts` (Zustand), gemeinsam für DOM und 3D-Szene.
+- Daten nur über Hooks in `apps/web/src/data/hooks.ts`; Netzdaten (Scryfall, Lore, Preisverlauf) werden in IndexedDB persistiert.
+- Scan-Ablauf: `apps/web/src/screens/ScanScreen.tsx` (Treffer -> gesehen -> feedback -> Eintrag). Die Kamera-Ansicht vom Scanner-Team kommt in den oberen Bildschirm.
 
 ## App-Routen
 

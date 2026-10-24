@@ -1,0 +1,22 @@
+.symbol { width: 1.05em; height: 1.05em; vertical-align: -0.15em; margin: 0 0.04em; }
+.mana { display: inline-flex; align-items: center; gap: 1px; white-space: nowrap; }
+.manaSep { margin: 0 4px; opacity: 0.6; }
+
+.cardImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 488 / 680;
+  border-radius: 4.75% / 3.4%;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.6);
+  background: #1b1720;
+}
+.cardMissing {
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  text-align: center;
+  font-family: var(--sd-font-display);
+  color: var(--sd-screen-ink-muted);
+  border: 1px solid rgb(255 255 255 / 0.1);
+}
