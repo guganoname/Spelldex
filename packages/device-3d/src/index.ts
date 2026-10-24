@@ -6,7 +6,7 @@
 import type { DeviceButton, ScreenAreas } from '@spelldex/shared/contracts';
 import type { Codex, CodexButton } from './codex.js';
 
-export { createCodex, codexEnvironment, quadToMatrix3d, lidEvents, DEFAULT_TOKENS, DIM, BUTTONS } from './codex.js';
+export { createCodex, codexEnvironment, tokensFromDesign, quadToMatrix3d, lidEvents, DEFAULT_TOKENS, DIM, BUTTONS } from './codex.js';
 export type { Codex, CodexTokens, CodexScreenQuad, CodexButton, CodexGem } from './codex.js';
 
 export const DEVICE_3D_AVAILABLE = true;

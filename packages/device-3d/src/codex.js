@@ -580,6 +580,38 @@ export function createCodex(opts = {}) {
     return new THREE.AnimationClip('open', duration, [new THREE.QuaternionKeyframeTrack('LidPivot.quaternion', times, values)]);
   }
 
+  /**
+   * Sets up the light the materials are tuned for: studio reflections (brass is black without
+   * them), AgX tone mapping and one warm key light from the top left. Returns a cleanup function.
+   */
+  function stage(scene, renderer) {
+    const prev = {
+      env: scene.environment, envI: scene.environmentIntensity,
+      tm: renderer.toneMapping, exp: renderer.toneMappingExposure,
+    };
+    const env = codexEnvironment(renderer);
+    scene.environment = env;
+    scene.environmentIntensity = 0.7;
+    renderer.toneMapping = THREE.AgXToneMapping;
+    renderer.toneMappingExposure = 0.92;
+    const lights = new THREE.Group();
+    lights.name = 'CodexLights';
+    const key = new THREE.DirectionalLight('#ffe7c2', 2.2);
+    key.position.set(-6, 12, 14);
+    const fill = new THREE.DirectionalLight('#9fb4ff', 0.25);
+    fill.position.set(8, -4, 6);
+    lights.add(key, fill);
+    scene.add(lights);
+    return () => {
+      scene.remove(lights);
+      scene.environment = prev.env;
+      scene.environmentIntensity = prev.envI;
+      renderer.toneMapping = prev.tm;
+      renderer.toneMappingExposure = prev.exp;
+      env.dispose();
+    };
+  }
+
   function dispose() {
     const seen = new Set();
     group.traverse((o) => {
@@ -599,7 +631,7 @@ export function createCodex(opts = {}) {
     gems: { tabs: tabGems, status: statusGems, cover: pentaGems, seal, scan: scanGem },
     get t() { return t; },
     setOpen, update, frameCamera, getScreenRects, pickButton, pickPart, pressButton,
-    setActiveTab, setGemGlow, setScanning, openClip, dispose,
+    setActiveTab, setGemGlow, setScanning, openClip, stage, dispose,
   };
 }
 
@@ -615,6 +647,23 @@ export function codexEnvironment(renderer) {
   env.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   pmrem.dispose();
   return texture;
+}
+
+/**
+ * Maps @spelldex/design tokens ({ color: { mana }, material, gem }) onto createCodex tokens.
+ * Missing entries keep the defaults.
+ */
+export function tokensFromDesign(design = {}) {
+  const out = { material: {}, gem: {} };
+  const m = design.material || {};
+  for (const [from, to] of [['brass', 'brass'], ['bronze', 'bronzeDark'], ['leather', 'leather'], ['obsidian', 'obsidian']]) {
+    if (m[from]) out.material[to] = { ...m[from] };
+  }
+  const mana = (design.color && design.color.mana) || {};
+  for (const [k, v] of Object.entries(mana)) out.gem[k] = { color: v };
+  const ei = design.gem && design.gem.emissiveIntensity;
+  if (ei) out.emissiveIntensity = { ...ei };
+  return out;
 }
 
 /** CSS matrix3d that maps a w×h element (transform-origin 0 0) onto four corners TL,TR,BR,BL. */

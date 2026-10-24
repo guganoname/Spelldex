@@ -5,11 +5,11 @@ The Codex: a vertical clamshell in aged brass and dragon-scale leather, built pr
 ## Use
 
 ```ts
-import { createCodex, codexEnvironment, quadToMatrix3d, lidEvents } from '@spelldex/device-3d';
+import { createCodex, tokensFromDesign, quadToMatrix3d, lidEvents } from '@spelldex/device-3d';
+import { tokens } from '@spelldex/design/tokens';
 
-scene.environment = codexEnvironment(renderer); // required: brass is black without reflections
-scene.environmentIntensity = 0.7;              // AgX tone mapping, exposure ~0.92, warm key light top left
-const codex = createCodex({ tokens });       // tokens: material/gem colors from @spelldex/design, sRGB hex
+const codex = createCodex({ tokens: tokensFromDesign(tokens) });
+const unstage = codex.stage(scene, renderer); // reflections + AgX + key light; brass is black without
 scene.add(codex.group);
 
 // every frame while something moves (render on demand otherwise)
