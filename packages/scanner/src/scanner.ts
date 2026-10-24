@@ -14,6 +14,12 @@ export interface ScannerOptions {
   guideAcceptDistance: number;
   /** Required gap to the best entry with a *different* artwork. */
   minMargin: number;
+  /**
+   * Above this distance the match is in the zone where cards missing from the index
+   * also land (their nearest neighbour drops as the index grows): require strictMargin.
+   */
+  strictAbove: number;
+  strictMargin: number;
   /** Consecutive frames with the same result before a hit fires. */
   stableFrames: number;
   /** Frames without the locked card before it may fire again. */
@@ -22,11 +28,16 @@ export interface ScannerOptions {
   guideFallback: boolean;
 }
 
+// Tuned on real Scryfall images through the camera simulator (bench/real.ts, 26 sets,
+// 10.9k faces): correct prints score median 20, unknown cards' best match 102-114 and
+// falling with index size. See packages/scanner/README.md.
 export const DEFAULT_OPTIONS: ScannerOptions = {
-  acceptDistance: 100,
+  acceptDistance: 96,
   confidentDistance: 60,
-  guideAcceptDistance: 80,
+  guideAcceptDistance: 76,
   minMargin: 16,
+  strictAbove: 90,
+  strictMargin: 24,
   stableFrames: 3,
   releaseFrames: 6,
   guideFallback: true,
@@ -119,7 +130,8 @@ export class Scanner {
         const g = this.index.group;
         const otherArt = nn.find((n) => g[n.i] !== g[best.i]);
         const margin = otherArt ? otherArt.score - best.score : 64;
-        if (margin < this.opts.minMargin) {
+        const need = best.score > this.opts.strictAbove ? Math.max(this.opts.minMargin, this.opts.strictMargin) : this.opts.minMargin;
+        if (margin < need) {
           // Two different artworks are about equally close.
           const cands = nn.filter((n) => n.score <= limit).slice(0, 3).map((n) => this.toMatch(n, margin));
           return withNn({ kind: 'ambiguous' as const, quad, candidates: cands });

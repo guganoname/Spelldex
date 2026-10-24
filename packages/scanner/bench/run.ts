@@ -17,7 +17,7 @@ import { decodeScanIndex, encodeScanIndex, scryfallIdAt, type ScanIndexEntry } f
 import { loadCardRgba } from '../../data-build/src/scan-index/index.ts';
 import { Scanner } from '../src/scanner.ts';
 import { searchIndex } from '../src/matcher.ts';
-import type { OcrFn } from '../src/ocr.ts';
+import { createOcrNode } from './ocr-node.ts';
 
 const argv = process.argv.slice(2);
 const arg = (k: string, d: number | string) => {
@@ -84,22 +84,8 @@ const index = decodeScanIndex(bin);
 console.error(`index: ${index.n} entries, ${(bin.length / 1e6).toFixed(2)} MB, hashing ${tHash.toFixed(1)} ms/card`);
 
 // ---- 2. OCR (Tesseract.js, bundled English model) -------------------------
-let ocr: OcrFn | undefined;
-let ocrWorker: { terminate(): Promise<unknown> } | undefined;
-if (USE_OCR) {
-  const { createWorker, PSM } = await import('tesseract.js');
-  const { createRequire } = await import('node:module');
-  const require = createRequire(import.meta.url);
-  const langPath = require.resolve('@tesseract.js-data/eng/package.json').replace('package.json', '4.0.0_best_int');
-  const w = await createWorker('eng', 1, { langPath, gzip: true, cacheMethod: 'none' });
-  await w.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/.- ', tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
-  ocrWorker = w;
-  ocr = async (img) => {
-    const png = await sharp(Buffer.from(img.data.buffer, img.data.byteOffset, img.data.byteLength), { raw: { width: img.width, height: img.height, channels: 4 } })
-      .grayscale().normalize().png().toBuffer();
-    return (await w.recognize(png)).data.text;
-  };
-}
+const ocrNode = USE_OCR ? await createOcrNode() : undefined;
+const ocr = ocrNode?.ocr;
 
 // ---- 3. photos -------------------------------------------------------------
 const scanner = new Scanner(cv, index, {}, ocr);
@@ -153,7 +139,7 @@ for (let k = 0; k < NPHOTOS; k++) {
     targetGroup: target?.group, nn: res.nn?.slice(0, 5).map((n) => `${index.group[n.i]}${n.i < prints.length && prints[n.i]!.id === target?.id ? '*' : ''}:${n.dArt}+${n.dFull}`).join(' ') });
   if ((k + 1) % 100 === 0) console.error(`${k + 1}/${NPHOTOS}`);
 }
-await ocrWorker?.terminate();
+await ocrNode?.terminate();
 
 // ---- 4. pure search speed over the full index ------------------------------
 const q = Scanner.queriesFor(cardCache.get(prints[0]!.id)!);

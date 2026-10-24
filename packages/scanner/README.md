@@ -44,4 +44,37 @@ Unbekannte Karten: 99 % korrekt abgelehnt (1 Fehlalarm in 105 Einzelbildern; der
 
 Zeit pro Bild (Node, ein Kern eines Cloud-Servers): Median 120 ms, 95 % unter 404 ms; die Indexsuche über 100k Einträge 8 ms. Auf Handys ist mit dem 2- bis 4-fachen zu rechnen; die Bildpumpe wartet auf den Worker und drosselt sich selbst. Im echten Browser (Chromium, simulierte Kamera, kleiner Index) kam der Treffer nach 0,9 s bei 58 ms pro Bild.
 
-Ein verpasstes Einzelbild ist im Betrieb meist harmlos, weil 8 Bilder pro Sekunde kommen. Die Schwellen in `DEFAULT_OPTIONS` sind an synthetischen Daten eingestellt und werden mit echten Karten nachgezogen.
+Ein verpasstes Einzelbild ist im Betrieb meist harmlos, weil 8 Bilder pro Sekunde kommen. Die Schwellen in `DEFAULT_OPTIONS` sind inzwischen an echten Karten eingestellt (nächster Abschnitt).
+
+## Messung mit echten Karten (2026-10-24)
+
+`bench/real.ts` baut den Index genau wie der Daten-Build (MTGJSON-Setdateien → `catalog.db` → Scryfall-„normal“-Bilder → `hashSources`) und schickt echte Kartenbilder durch denselben Kamera-Simulator. Karten aus Sets außerhalb des Index, deren Illustration nicht im Index vorkommt, messen Fehlalarme. Downloads landen in `.data-cache/scan-bench`, Wiederholungen laufen offline. Mehrere Seeds parallel und danach `--from a/rows.json,b/rows.json` zum gemeinsamen Auswerten.
+
+```
+node --experimental-strip-types bench/real.ts --seed 1 --photos 450 --ocr 1 \
+  --sets LEA,ICE,7ED,8ED,RAV,M10,ISD,ZEN,RTR,THS,KLD,DOM,ELD,KHM,MID,NEO,DMU,ONE,MOM,BLB,DSK,FDN,MH3,2XM,DMR,C21 \
+  --unknown MIR,TMP,5DN,M19,IKO,LCI,OTJ,DFT,TDM,MKM,WOE
+```
+
+Index: 26 Sets von Alpha bis Foundations (alte und neue Rahmen, Showcase, Borderless, Doppelseiten, Reprint-Sets), 10.921 Kartenseiten, 725 KB. 3 × 450 Einzelbilder, davon 269 unbekannte Karten, OCR an. Vor #18 (lokale Schwelle im Detektor).
+
+| | erkannt (richtige Illustration) | davon anderer Druck | falsche Karte | verpasst |
+|---|---|---|---|---|
+| alle | 74,7 % | 3,6 % | 0,1 % | 25,3 % |
+| leicht | 79,9 % | 2,8 % | 0,2 % | 19,9 % |
+| mittel | 74,9 % | 4,5 % | 0,0 % | 25,2 % |
+| schwer | 63,2 % | 3,4 % | 0,0 % | 36,8 % |
+| in Hülle | 71,6 % | 5,1 % | 0,0 % | 28,4 % |
+| Illustration in mehreren Drucken | 74,5 % | 9,6 % | 0,2 % | 25,3 % |
+
+(„erkannt“ = richtiger Druck + anderer Druck angeboten + mehrdeutig mit richtiger Karte unter den Kandidaten.) Unbekannte Karten: 269 von 269 abgelehnt. Zeit pro Bild: Median 137 ms, 95 % unter 275 ms (Node, Index 10.9k, OCR an).
+
+Abstände (von 320): richtige Karte Median 20, 95 % unter 84. Bester Treffer unbekannter Karten: mindestens 102, Median 114; bei 950 Einträgen waren es 108 und 120. Mit jeder Verzehnfachung des Index rücken unbekannte Karten also um etwa 6 näher, beim vollen Index (~100k) liegen die ersten unter 100. Deshalb die neuen Schwellen:
+
+- `acceptDistance` 100 → 96, `guideAcceptDistance` 80 → 76
+- neu: oberhalb von `strictAbove` 90 muss der Abstand zur nächsten anderen Illustration mindestens `strictMargin` 24 statt 16 betragen, sonst wird es „mehrdeutig“ (die richtige Karte steht dann unter den Kandidaten)
+
+Nachgerechnet mit um 6 bzw. 10 verschobenen Abständen der unbekannten Karten (Schätzung für 100k): alte Schwellen 0,7 % bzw. 1,1 % Fehlalarme pro Einzelbild, neue 0,0 %; mehrdeutig 0,4 % bzw. 5,6 % (alt 4,8 % bzw. 18,6 %). Kosten: 1,2 Punkte weniger Erkennung pro Einzelbild, falsche Karten 0,3 % → 0,1 %. `report.json` enthält den ganzen Sweep über Schwelle und Abstand.
+
+Die Verpasser sind vor allem fehlende Umrisse (Karte berührt Gegenstände ähnlicher Helligkeit, schwarzer Rand auf dunklem Tisch; dafür #18) und bei gefundenem Umriss Abstände 100–120 durch Hülle und Spiegelung. Simulierte Fotos sind keine echten Handyfotos: die absoluten Quoten sind eine Untergrenze für ruhig gehaltene Karten, die Abstände und Fehlalarme sind belastbarer.
+
