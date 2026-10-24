@@ -19,6 +19,9 @@ import css from './Device3D.module.css';
 
 /** Below this lid progress the screens are hidden (they face away or are too oblique). */
 const SCREEN_VISIBLE_FROM = 0.82;
+/** Frame-time probe while the lid moves: too slow on average drops the pixel ratio to 1. */
+const PROBE_FRAMES = 30;
+const PROBE_SLOW_MS = 22;
 
 interface Overlay { width: number; height: number; left: number; top: number }
 
@@ -27,7 +30,7 @@ function Scene({ codex, progress, onFrame }: {
   progress: ReturnType<typeof useMotionValue<number>>;
   onFrame(camera: THREE.PerspectiveCamera, size: { width: number; height: number }): void;
 }) {
-  const { camera, size, invalidate, gl, scene } = useThree();
+  const { camera, size, invalidate, gl, scene, setDpr } = useThree();
   const cam = camera as THREE.PerspectiveCamera;
 
   // Reflections, AgX tone mapping and the warm key light from the top left the materials are tuned
@@ -38,12 +41,25 @@ function Scene({ codex, progress, onFrame }: {
     return unstage;
   }, [codex, gl, scene, invalidate]);
 
+  // Survives re-runs of the effect below, so the probe runs once per mount.
+  const probe = useRef({ frames: 0, ms: 0, done: false });
+
   useEffect(() => {
     let last = performance.now();
     let raf = 0;
     const tick = () => {
       const now = performance.now();
       const moving = codex.update((now - last) / 1000);
+      const p = probe.current;
+      // kick() resets `last`, so idle gaps never count as slow frames.
+      if (!p.done && moving) {
+        p.frames++;
+        p.ms += now - last;
+        if (p.frames >= PROBE_FRAMES) {
+          p.done = true;
+          if (p.ms / p.frames > PROBE_SLOW_MS && gl.getPixelRatio() > 1) setDpr(1);
+        }
+      }
       last = now;
       codex.frameCamera(cam, size.width / size.height);
       onFrame(cam, size);
@@ -66,7 +82,7 @@ function Scene({ codex, progress, onFrame }: {
       unsub();
       cancelAnimationFrame(raf);
     };
-  }, [codex, cam, size, progress, onFrame, invalidate]);
+  }, [codex, cam, size, progress, onFrame, invalidate, gl, setDpr]);
 
   return (
     <>
