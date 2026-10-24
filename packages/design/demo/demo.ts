@@ -329,13 +329,13 @@ $("#scan").addEventListener("click", () => {
   lens.dataset.scanning = "";
   status.textContent = "Suche Kartenumriss …";
   const t = (ms: number, fn: () => void) => setTimeout(fn, reduced ? Math.min(ms, 300) : ms);
-  t(900, () => {
+  t(450, () => {
     feedback("scan-lock");
     lens.dataset.locked = "";
     $$(".lens .sd-bracket").forEach((b) => b.style.setProperty("--inset-y", "12px"));
     status.textContent = "Karte erkannt, stabilisiere …";
   });
-  t(1650, () => {
+  t(900, () => {
     delete lens.dataset.scanning;
     feedback("scan-hit", { rarity });
     flash.animate([{ opacity: 0.95 }, { opacity: 0 }], { duration: 520, easing: "ease-out" });
@@ -343,7 +343,7 @@ $("#scan").addEventListener("click", () => {
     status.textContent = `Shivan Dragon · ${rarity}`;
     if (current === 0) showGauge();
   });
-  t(2400, () => {
+  t(1700, () => {
     $$(".lens .sd-bracket").forEach((b) => b.style.removeProperty("--inset-y"));
     delete lens.dataset.locked;
     scanning = false;
@@ -413,12 +413,15 @@ $$<HTMLButtonElement>("#rarity [role=radio]").forEach((b, _, all) =>
 const prefSound = $("#prefSound");
 const prefHaptics = $("#prefHaptics");
 const prefPlayback = $("#prefPlayback");
+const prefPattern = $("#prefPattern");
 const vol = $<HTMLInputElement>("#vol");
 function loadPrefs() {
   const s = store.get("sound"), h = store.get("haptics"), p = store.get("playback"), v = store.get("volume");
   if (s) prefSound.setAttribute("aria-checked", s);
   if (h) prefHaptics.setAttribute("aria-checked", h);
   if (p) prefPlayback.setAttribute("aria-checked", p);
+  const ip = store.get("iosPattern");
+  if (ip) prefPattern.setAttribute("aria-checked", ip);
   if (v) vol.value = v;
   applyPrefs();
 }
@@ -428,7 +431,9 @@ function applyPrefs() {
     haptics: prefHaptics.getAttribute("aria-checked") === "true",
     audioSession: prefPlayback.getAttribute("aria-checked") === "true" ? "playback" : "ambient",
     volume: Number(vol.value),
+    iosHaptics: prefPattern.getAttribute("aria-checked") === "true" ? "hybrid" : "tap",
   });
+  store.set("iosPattern", prefPattern.getAttribute("aria-checked")!);
   store.set("sound", prefSound.getAttribute("aria-checked")!);
   store.set("haptics", prefHaptics.getAttribute("aria-checked")!);
   store.set("playback", prefPlayback.getAttribute("aria-checked")!);
@@ -437,6 +442,7 @@ function applyPrefs() {
 bindToggle(prefSound, applyPrefs);
 bindToggle(prefHaptics, applyPrefs);
 bindToggle(prefPlayback, applyPrefs);
+bindToggle(prefPattern, applyPrefs);
 vol.addEventListener("input", applyPrefs);
 vol.addEventListener("change", () => feedback("press"));
 loadPrefs();
