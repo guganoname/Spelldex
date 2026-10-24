@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 import { CARD_H, CARD_W, decodeScanIndex, hashCard, hashToHex, scryfallIdAt } from '@spelldex/shared/scan';
-import { hashSources, loadCardRgba, scryfallImageUrl } from '../src/scan-index/index.ts';
+import { fetchImage, hashSources, loadCardRgba, scryfallImageUrl, Throttle } from '../src/scan-index/index.ts';
 
 function card(seed: number): Uint8ClampedArray {
   const px = new Uint8ClampedArray(CARD_W * CARD_H * 4);
@@ -53,6 +53,27 @@ describe('scan index build', () => {
     const again = await hashSources(sources, { imagesDir: dir, previous });
     expect(again.failed).toHaveLength(0);
     expect(decodeScanIndex(again.bin).n).toBe(4);
+  });
+
+  it('retries throttled CDN requests, honouring Retry-After, and gives up on 404', async () => {
+    const real = globalThis.fetch;
+    const body = await png(card(3));
+    let calls = 0;
+    globalThis.fetch = (async (url: string) => {
+      calls++;
+      if (String(url).endsWith('missing.jpg')) return new Response(null, { status: 404 });
+      return calls < 3 ? new Response(null, { status: 429, headers: { 'Retry-After': '0' } }) : new Response(body, { status: 200 });
+    }) as typeof fetch;
+    try {
+      const t = new Throttle(0);
+      const buf = await fetchImage('https://cdn.test/a.jpg', t, 5, 1);
+      expect(buf.length).toBe(body.length);
+      expect(calls).toBe(3);
+      await expect(fetchImage('https://cdn.test/missing.jpg', t, 5, 1)).rejects.toThrow(/404/);
+      expect(calls).toBe(4);
+    } finally {
+      globalThis.fetch = real;
+    }
   });
 
   it('builds Scryfall CDN URLs', () => {
