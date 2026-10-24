@@ -58,22 +58,34 @@ jobs:
           restore-keys: scan-index-
 
       - name: Daten bauen
+        # Below the job timeout, so the next step can still save a partial scan index.
+        timeout-minutes: 210
         env:
           NODE_OPTIONS: --max-old-space-size=5500
-        run: >
-          pnpm data:build
-          --mtgjson sources/AllPrintings.json.gz
-          --prices sources/AllPrices.json.gz
-          --spellbook sources/variants.json
-          --out apps/web/public/data
-          --scan-previous scan-cache/scan-index.bin
+        run: |
+          # A finished index beats a checkpoint from an aborted first run.
+          prev=scan-cache/scan-index.bin
+          [ -f "$prev" ] || prev=scan-cache/scan-index.partial.bin
+          pnpm data:build \
+            --mtgjson sources/AllPrintings.json.gz \
+            --prices sources/AllPrices.json.gz \
+            --spellbook sources/variants.json \
+            --out apps/web/public/data \
+            --scan-previous "$prev"
 
+      # Runs after failures too: an aborted run keeps its hashing progress for the next one.
       - name: Scan-Index merken
         id: scan
+        if: always()
         run: |
-          f=$(node -p "require('./apps/web/public/data/manifest.json').artifacts.scanIndex?.path ?? ''")
-          if [ -n "$f" ]; then mkdir -p scan-cache && cp "apps/web/public/data/$f" scan-cache/scan-index.bin && echo "built=1" >> "$GITHUB_OUTPUT"; fi
-      - if: steps.scan.outputs.built == '1'
+          out=apps/web/public/data
+          f=$(node -p "try { require('./$out/manifest.json').artifacts.scanIndex?.path ?? '' } catch { '' }")
+          if [ -n "$f" ] && [ -f "$out/$f" ]; then
+            rm -rf scan-cache && mkdir -p scan-cache && cp "$out/$f" scan-cache/scan-index.bin && echo "save=1" >> "$GITHUB_OUTPUT"
+          elif [ -f "$out/scan-index.partial.bin" ]; then
+            rm -rf scan-cache && mkdir -p scan-cache && cp "$out/scan-index.partial.bin" scan-cache/ && echo "save=1" >> "$GITHUB_OUTPUT"
+          fi
+      - if: always() && steps.scan.outputs.save == '1'
         uses: actions/cache/save@v4
         with:
           path: scan-cache
