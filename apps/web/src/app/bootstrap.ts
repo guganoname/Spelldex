@@ -2,14 +2,13 @@
 import type { CatalogStatus } from '@spelldex/shared/contracts';
 import { setFeedbackPrefs } from '@spelldex/design/feedback';
 import { Comlink, data, MANIFEST_URL } from '../data/client.ts';
-import { useDeviceStore } from '../state/device.ts';
+import { feedbackPrefs, useDeviceStore } from '../state/device.ts';
 
 export async function bootstrap(): Promise<void> {
   const store = useDeviceStore.getState();
-  const { sound, haptics, volume } = store.prefs;
-  setFeedbackPrefs({ sound, haptics, volume });
+  setFeedbackPrefs(feedbackPrefs(store.prefs));
   useDeviceStore.subscribe((s, prev) => {
-    if (s.prefs !== prev.prefs) setFeedbackPrefs({ sound: s.prefs.sound, haptics: s.prefs.haptics, volume: s.prefs.volume });
+    if (s.prefs !== prev.prefs) setFeedbackPrefs(feedbackPrefs(s.prefs));
   });
 
   const api = data();

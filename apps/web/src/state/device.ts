@@ -18,7 +18,16 @@ interface Prefs {
   /** null = decide by GPU capability */
   shell: ShellKind | null;
   cardLanguage: 'de' | 'en';
+  /** 'ambient' respects the iPhone mute switch, 'playback' plays anyway */
+  audioSession: 'ambient' | 'playback';
+  /** iPhone: 'hybrid' adds coded tick patterns, 'tap' only the element tick */
+  iosHaptics: 'hybrid' | 'tap';
 }
+
+const DEFAULT_PREFS: Prefs = {
+  sound: true, haptics: true, volume: 0.8, reducedMotion: null, shell: null, cardLanguage: 'de',
+  audioSession: 'ambient', iosHaptics: 'hybrid',
+};
 
 interface DeviceState {
   /** Lid target: true = open. The shell animates towards it with a spring. */
@@ -49,7 +58,7 @@ export const useDeviceStore = create<DeviceState>()(
       accent: 'colorless',
       activeGem: null,
       catalog: { phase: 'empty', version: null, storage: null },
-      prefs: { sound: true, haptics: true, volume: 0.8, reducedMotion: null, shell: null, cardLanguage: 'de' },
+      prefs: DEFAULT_PREFS,
       setOpen: (open) => set({ open }),
       setLidProgress: (lidProgress) => set({ lidProgress }),
       setUnlocked: () => set({ unlocked: true }),
@@ -63,6 +72,11 @@ export const useDeviceStore = create<DeviceState>()(
       storage: createJSONStorage(() => localStorage),
       // From the second start the device opens in its last state.
       partialize: (s) => ({ prefs: s.prefs, open: s.open }),
+      // Stored prefs from older versions lack newer fields; keep the defaults for those.
+      merge: (stored, current) => {
+        const p = (stored ?? {}) as Partial<Pick<DeviceState, 'prefs' | 'open'>>;
+        return { ...current, ...p, prefs: { ...current.prefs, ...p.prefs } };
+      },
     },
   ),
 );
@@ -88,6 +102,11 @@ export function useDeviceButton(handler: ButtonHandler): void {
       handlers.splice(handlers.indexOf(h), 1);
     };
   }, []);
+}
+
+/** The part of the prefs that the design package's feedback engine reads. */
+export function feedbackPrefs(p: Prefs) {
+  return { sound: p.sound, haptics: p.haptics, volume: p.volume, audioSession: p.audioSession, iosHaptics: p.iosHaptics };
 }
 
 export function prefersReducedMotion(prefs: Prefs): boolean {
