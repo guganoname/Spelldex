@@ -54,6 +54,14 @@ describe('Scanner', () => {
     }
   }, 60_000);
 
+  it('asks for the stricter margin above strictAbove', async () => {
+    const photo = await photograph(cv, cards[5]!, rng(11), { difficulty: 'easy', upsideDown: false, sleeve: false, glare: false });
+    expect((await new Scanner(cv, index).identify(photo)).kind).toBe('match');
+    // Every distance is "above", and no other artwork is 200 bits away: never a plain match.
+    const strict = await new Scanner(cv, index, { strictAbove: -1, strictMargin: 200 }).identify(photo);
+    expect(strict.kind).toBe('ambiguous');
+  }, 60_000);
+
   it('reports quads as {x, y} corners in frame pixels', async () => {
     const scanner = new Scanner(cv, index);
     const photo = await photograph(cv, cards[0]!, rng(3), { difficulty: 'easy', upsideDown: false, sleeve: false, glare: false });
