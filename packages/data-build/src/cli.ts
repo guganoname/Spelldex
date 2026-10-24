@@ -2,6 +2,7 @@
  * Data build entry. Example (CI):
  *   pnpm data:build --mtgjson AllPrintings.json.gz --prices AllPrices.json.gz \
  *     --spellbook variants.json --out dist/data
+ * pnpm runs this inside packages/data-build: relative paths resolve from there, pass absolute ones.
  * Writes catalog.db.gz, lore.json, prices/*, scan-index.bin and manifest.json into --out.
  */
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
