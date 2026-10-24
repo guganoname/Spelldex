@@ -413,7 +413,7 @@ export function createCodex(opts = {}) {
   function setOpen(v) {
     t = v;
     // Overshoot past 1 swings the lid back only a little: heavy lid, soft stop.
-    const lt = v > 1 ? 1 + (v - 1) * 0.35 : Math.max(0, v);
+    const lt = v > 1 ? 1 + (v - 1) * 0.6 : Math.max(0, v);
     lidPivot.rotation.x = Math.PI * (1 - lt);
     const wake = smooth(0.72, 1.0, v);
     mats.glassLens.emissiveIntensity = wake * 0.9;

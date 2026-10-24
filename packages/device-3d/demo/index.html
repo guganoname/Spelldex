@@ -267,7 +267,7 @@ async function boot() {
   window.__codex = codex; window.__scene = scene; window.__THREE = THREE; window.__renderer = renderer; window.__camera = camera;
 
   // spring.lid from the design tokens
-  const SPRING = { mass: 2.2, stiffness: 170, damping: 22 };
+  const SPRING = { mass: 2, stiffness: 260, damping: 34 };
   let x = 0, v = 0, target = 0, dragging = null, settled = true, dirty = true;
   let tab = 0, found = false;
 
