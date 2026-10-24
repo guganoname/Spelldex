@@ -12,6 +12,8 @@ export interface RgbaImage {
 
 const CARD_ASPECT = 63 / 88; // width / height
 const DETECT_MAX_SIDE = 480;
+/** Smallest card we look for, as a fraction of the frame (a card about 30 cm away). */
+const MIN_AREA = 0.035;
 
 type Pt = [number, number];
 /** Card corners in frame pixels: TL, TR, BR, BL in card orientation. */
@@ -96,7 +98,7 @@ function scoreQuad(q: Pt[], frameArea: number, edges: any): number {
   if (!isConvex(q)) return 0;
   const area = quadArea(q);
   const rel = area / frameArea;
-  if (rel < 0.06 || rel > 0.97) return 0;
+  if (rel < MIN_AREA || rel > 0.97) return 0;
   const o = orderQuad(q);
   const w = (dist(o[0], o[1]) + dist(o[3], o[2])) / 2;
   const h = (dist(o[0], o[3]) + dist(o[1], o[2])) / 2;
@@ -123,7 +125,7 @@ function quadsInBinary(cv: CV, bin: any, frameArea: number, edges: any, found: C
   for (let i = 0; i < contours.size(); i++) {
     const c = contours.get(i);
     const area = cv.contourArea(c);
-    if (area < frameArea * 0.05) { c.delete(); continue; }
+    if (area < frameArea * MIN_AREA * 0.8) { c.delete(); continue; }
     const hull = new cv.Mat();
     cv.convexHull(c, hull, false, true);
     const peri = cv.arcLength(hull, true);
@@ -203,6 +205,15 @@ export function detectCandidates(cv: CV, src: any, maxCandidates = 3): Corners[]
   quadsInBinary(cv, bin, frameArea, edges, found);
   cv.bitwise_not(bin, bin);
   quadsInBinary(cv, bin, frameArea, edges, found);
+
+  // Local-contrast strategy: most cards have a dark (rarely white) border that is
+  // darker than everything right next to it, whatever the table or clutter does.
+  // The border ring's outer contour is the card, its hole the inner frame.
+  const block = Math.max(15, Math.round(Math.min(small.cols, small.rows) / 12) | 1);
+  for (const pol of [cv.THRESH_BINARY_INV, cv.THRESH_BINARY]) {
+    cv.adaptiveThreshold(gray, bin, 255, cv.ADAPTIVE_THRESH_MEAN_C, pol, block, pol === cv.THRESH_BINARY_INV ? 8 : -8);
+    quadsInBinary(cv, bin, frameArea, edges, found);
+  }
 
   small.delete(); gray.delete(); edges.delete(); kernel.delete(); bin.delete();
 

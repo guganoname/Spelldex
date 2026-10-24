@@ -4,7 +4,7 @@ Erkennt Magic-Karten über die Kamera, offline und ohne KI-Modell zur Laufzeit.
 
 ## Ablauf pro Kamerabild (im Worker)
 
-1. **Umriss finden** (OpenCV.js): Graustufen, Canny-Kanten und Otsu-Schwelle, Vierecke mit Kartenformat 63:88, bewertet nach Fläche und Kantenunterstützung auf allen vier Seiten. Danach Subpixel-Verfeinerung: Geraden durch die stärksten Helligkeitssprünge, Schnittpunkte als Ecken.
+1. **Umriss finden** (OpenCV.js): Graustufen, Canny-Kanten, Otsu-Schwelle und eine lokale Schwelle (der dunkle Kartenrand ist dunkler als alles direkt daneben, auch wenn die Karte andere Gegenstände berührt), Vierecke mit Kartenformat 63:88, bewertet nach Fläche und Kantenunterstützung auf allen vier Seiten. Danach Subpixel-Verfeinerung: Geraden durch die stärksten Helligkeitssprünge, Schnittpunkte als Ecken.
 2. **Hypothesen**: Erkennt der Detektor statt des Kartenrands den inneren Rahmen oder die Bildbox, werden die daraus folgenden Außenränder mitgeprüft; ohne Umriss der Führungsrahmen in der Bildmitte. Es gewinnt der beste Treffer, bei einem sicheren Treffer bricht die Suche früh ab.
 3. **Entzerren** auf 488×680 Pixel, das Format der Scryfall-Bilder.
 4. **Fingerabdruck** (`@spelldex/shared/scan`): 256-Bit-pHash über die Illustration, 64-Bit-pHash über die ganze Karte, beide nach Grauwelt-Weißabgleich. Beide Drehrichtungen (Karte steht auf dem Kopf).
@@ -45,3 +45,22 @@ Unbekannte Karten: 99 % korrekt abgelehnt (1 Fehlalarm in 105 Einzelbildern; der
 Zeit pro Bild (Node, ein Kern eines Cloud-Servers): Median 120 ms, 95 % unter 404 ms; die Indexsuche über 100k Einträge 8 ms. Auf Handys ist mit dem 2- bis 4-fachen zu rechnen; die Bildpumpe wartet auf den Worker und drosselt sich selbst. Im echten Browser (Chromium, simulierte Kamera, kleiner Index) kam der Treffer nach 0,9 s bei 58 ms pro Bild.
 
 Ein verpasstes Einzelbild ist im Betrieb meist harmlos, weil 8 Bilder pro Sekunde kommen. Die Schwellen in `DEFAULT_OPTIONS` sind an synthetischen Daten eingestellt und werden mit echten Karten nachgezogen.
+
+## Messung mit echten Karten (2026-10-24)
+
+Echte Scryfall-Bilder (Index M10, ISD, DSK: 950 Kartenseiten), fotografiert vom Kamera-Simulator oben, ohne OCR. Gemessen vom Mess-Thread mit `bench/real.ts`, 400 Fotos, Seed 11:
+
+| | richtige Karte | anderer Druck angeboten | mehrdeutig, richtige dabei | falsche Karte | verpasst |
+|---|---|---|---|---|---|
+| vor der lokalen Schwelle | 80,3 % | 0,6 % | 0,9 % | 0,0 % | 18,2 % |
+
+Von den Verpassern fand der Detektor bei gut der Hälfte keinen Umriss: Die Karte berührte Gegenstände ähnlicher Helligkeit, oder sie lag schwarzrandig auf dunklem Tisch und nicht in der Mitte. Die lokale Schwelle behebt das zum großen Teil (`bench/real-misses.ts` mit 100 echten Karten):
+
+| | vorher | nachher |
+|---|---|---|
+| 64 frühere Verpasser: Umriss gefunden | 31 | 55 |
+| 64 frühere Verpasser: jetzt erkannt | 2 | 33 |
+| 300 neue Fotos: richtig / falsch | 75,3 % / 0,0 % | 81,3 % / 0,0 % |
+| 300 neue Fotos: Zeit pro Bild (Median / 95 %) | 46 / 224 ms | 64 / 384 ms |
+
+Die übrigen Verpasser haben meist einen passenden Umriss, aber Abstand 105–120 (Hülle, Spiegelung) und liegen damit knapp über `acceptDistance`. Das ist Sache der Schwellen, die mit dem großen Lauf (26 Sets, ~10.900 Seiten) nachgezogen werden. `bench/detect-bench.ts` ist ein synthetischer Stresstest nur für die Umrisserkennung (berührende Gegenstände, dunkler Tisch, Karte außerhalb der Mitte).
