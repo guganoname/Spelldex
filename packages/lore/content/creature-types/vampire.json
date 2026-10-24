@@ -1,0 +1,20 @@
+{
+  "id": "vampire",
+  "kind": "creature-type",
+  "name": {
+    "de": "Vampir",
+    "en": "Vampire"
+  },
+  "summary": {
+    "de": "Vampire sind untote oder blutdurstige Adelsgeschlechter, unter anderem auf Innistrad und Ixalan. Im Spiel sind sie meist Rot oder Schwarz und bieten Lebensraub und Aggressivitaet."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Vampire",
+      "url": "https://mtg.wiki/page/Vampire",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

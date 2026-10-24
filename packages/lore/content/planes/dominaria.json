@@ -1,0 +1,20 @@
+{
+  "id": "dominaria",
+  "kind": "plane",
+  "name": {
+    "de": "Dominaria",
+    "en": "Dominaria"
+  },
+  "summary": {
+    "de": "Dominaria ist die klassische Ebene der Urzeit des Spiels mit Kontinenten, Kriegen zwischen Reichen und der Geschichte von Urza und Mishra."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Dominaria",
+      "url": "https://mtg.wiki/page/Dominaria",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

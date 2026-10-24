@@ -1,0 +1,20 @@
+{
+  "id": "sphinx",
+  "kind": "creature-type",
+  "name": {
+    "de": "Sphinx",
+    "en": "Sphinx"
+  },
+  "summary": {
+    "de": "Sphingen sind kluge, geheimnisvolle Wesen im Blauen Mana, oft mit Fluegeln und dem Thema Wissen und Raetsel verbunden."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Sphinx",
+      "url": "https://mtg.wiki/page/Sphinx",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

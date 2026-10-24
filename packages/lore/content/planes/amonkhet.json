@@ -1,0 +1,20 @@
+{
+  "id": "amonkhet",
+  "kind": "plane",
+  "name": {
+    "de": "Amonkhet",
+    "en": "Amonkhet"
+  },
+  "summary": {
+    "de": "Amonkhet ist eine Wüstenebene mit ägyptisch anmutenden Städten, auf der Gottheiten die Bewohner durch Prüfungen führen."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Amonkhet",
+      "url": "https://mtg.wiki/page/Amonkhet",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

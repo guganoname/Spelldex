@@ -1,0 +1,98 @@
+{
+ "meta": {
+  "version": "fixture"
+ },
+ "data": {
+  "code": "C21",
+  "name": "Commander 2021",
+  "releaseDate": "2021-04-23",
+  "type": "commander",
+  "keyruneCode": "C21",
+  "cards": [
+   {
+    "uuid": "2fe1dfca-d7ed-5dfe-b5f8-52a4d451e72e",
+    "name": "Sol Ring",
+    "type": "Artifact",
+    "layout": "normal",
+    "colors": [],
+    "colorIdentity": [],
+    "number": "263",
+    "rarity": "uncommon",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Banned",
+     "vintage": "Restricted"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "C21",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "018a2646-6c54-5f2f-8deb-46f4de6c71af",
+     "scryfallOracleId": "a3315539-ce3b-5972-a8b5-0f68bf86609a",
+     "mcmId": "854822"
+    },
+    "manaCost": "{1}",
+    "text": "{T}: Add {C}{C}.",
+    "edhrecRank": 1,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Sol-Ring",
+      "type": "Artefakt",
+      "text": "{T}: Erzeuge {C}{C}."
+     }
+    ]
+   },
+   {
+    "uuid": "c39ec7a3-27d6-558b-85b2-6f5c2e16ea3c",
+    "name": "Lightning Bolt",
+    "type": "Instant",
+    "layout": "normal",
+    "colors": [
+     "R"
+    ],
+    "colorIdentity": [
+     "R"
+    ],
+    "number": "171",
+    "rarity": "uncommon",
+    "artist": "Other Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "C21",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "a386a690-89fb-513b-9dd3-74f651955a03",
+     "scryfallOracleId": "0702633c-e5ed-54c3-b35f-1c25a0f58a0e",
+     "mcmId": "258866"
+    },
+    "manaCost": "{R}",
+    "text": "Lightning Bolt deals 3 damage to any target.",
+    "edhrecRank": 12
+   }
+  ],
+  "parentCode": "STX"
+ }
+}

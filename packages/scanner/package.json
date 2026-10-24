@@ -1,0 +1,9 @@
+{
+  "name": "@spelldex/scanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PLACEHOLDER until the scanner thread delivers: scan worker (Comlink) + camera.ts",
+  "exports": { ".": "./src/index.ts", "./worker": "./src/worker.ts", "./camera": "./src/camera.ts" },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" }
+}

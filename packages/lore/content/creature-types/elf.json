@@ -1,0 +1,20 @@
+{
+  "id": "elf",
+  "kind": "creature-type",
+  "name": {
+    "de": "Elf",
+    "en": "Elf"
+  },
+  "summary": {
+    "de": "Elfen sind meist waldbewohnende, naturverbundene Voelker des Gruenen Manas. Im Spiel sind sie auf vielen Ebenen vertreten und stehen fuer schnelle Mana-Erzeugung und Elfen-Tribal-Decks."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Elf",
+      "url": "https://mtg.wiki/page/Elf",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

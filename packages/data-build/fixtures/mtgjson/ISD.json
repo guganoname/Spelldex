@@ -1,0 +1,162 @@
+{
+ "meta": {
+  "version": "fixture"
+ },
+ "data": {
+  "code": "ISD",
+  "name": "Innistrad",
+  "releaseDate": "2011-09-30",
+  "type": "expansion",
+  "keyruneCode": "ISD",
+  "cards": [
+   {
+    "uuid": "6aabafcd-5fd9-535c-b1c4-d25971ce6d80",
+    "name": "Delver of Secrets // Insectile Aberration",
+    "type": "Creature — Human Wizard",
+    "layout": "transform",
+    "colors": [
+     "U"
+    ],
+    "colorIdentity": [
+     "U"
+    ],
+    "number": "51a",
+    "rarity": "common",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "ISD",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "3ecd7f2e-4da0-5290-aea1-4c365ffa8805",
+     "scryfallOracleId": "d8f1b1ed-b23f-50c4-9827-99c427278f0d",
+     "mcmId": "33177"
+    },
+    "manaCost": "{U}",
+    "text": "At the beginning of your upkeep, look at the top card of your library. You may reveal that card. If an instant or sorcery card is revealed this way, transform Delver of Secrets.",
+    "power": "1",
+    "toughness": "1",
+    "faceName": "Delver of Secrets",
+    "side": "a",
+    "edhrecRank": 5000,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Geheimnissucher",
+      "type": "Kreatur — Mensch, Zauberer",
+      "text": "Schau dir zu Beginn deines Versorgungssegments die oberste Karte deiner Bibliothek an.",
+      "faceName": "Geheimnissucher"
+     }
+    ]
+   },
+   {
+    "uuid": "6107121d-8530-59be-9ed6-57a17bfedc7c",
+    "name": "Delver of Secrets // Insectile Aberration",
+    "type": "Creature — Human Insect",
+    "layout": "transform",
+    "colors": [
+     "U"
+    ],
+    "colorIdentity": [
+     "U"
+    ],
+    "number": "51a",
+    "rarity": "common",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [
+     "Flying"
+    ],
+    "manaValue": 1,
+    "setCode": "ISD",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "3ecd7f2e-4da0-5290-aea1-4c365ffa8805",
+     "scryfallOracleId": "d8f1b1ed-b23f-50c4-9827-99c427278f0d",
+     "mcmId": "33177"
+    },
+    "text": "Flying",
+    "power": "3",
+    "toughness": "2",
+    "faceName": "Insectile Aberration",
+    "side": "b"
+   },
+   {
+    "uuid": "03ff8930-eecc-555a-bffb-8251cfa26cb1",
+    "name": "Avacyn's Pilgrim",
+    "type": "Creature — Human Monk",
+    "layout": "normal",
+    "colors": [
+     "G"
+    ],
+    "colorIdentity": [
+     "G",
+     "W"
+    ],
+    "number": "1",
+    "rarity": "common",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "ISD",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "e03b3b21-1002-5d20-bc2a-b58df2686b9c",
+     "scryfallOracleId": "239db466-5c25-5e3c-bdb7-747eafb00c97",
+     "mcmId": "875489"
+    },
+    "manaCost": "{G}",
+    "text": "{T}: Add {W}.",
+    "power": "1",
+    "toughness": "1",
+    "edhrecRank": 3000,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Avacyns Pilgerin",
+      "type": "Kreatur — Mensch, Mönch",
+      "text": "{T}: Erzeuge {W}."
+     }
+    ]
+   }
+  ]
+ }
+}

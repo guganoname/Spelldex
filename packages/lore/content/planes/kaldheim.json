@@ -1,0 +1,20 @@
+{
+  "id": "kaldheim",
+  "kind": "plane",
+  "name": {
+    "de": "Kaldheim",
+    "en": "Kaldheim"
+  },
+  "summary": {
+    "de": "Kaldheim ist eine Ebene nach nordischem Vorbild mit neun Reichen, die ein riesiger Weltenbaum verbindet."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Kaldheim",
+      "url": "https://mtg.wiki/page/Kaldheim",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

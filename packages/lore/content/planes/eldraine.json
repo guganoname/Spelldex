@@ -1,0 +1,20 @@
+{
+  "id": "eldraine",
+  "kind": "plane",
+  "name": {
+    "de": "Eldraine",
+    "en": "Eldraine"
+  },
+  "summary": {
+    "de": "Eldraine ist eine Märchenwelt mit Rittern, Hexen, Feen und Riesen."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Eldraine",
+      "url": "https://mtg.wiki/page/Eldraine",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

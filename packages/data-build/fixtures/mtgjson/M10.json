@@ -1,0 +1,166 @@
+{
+ "meta": {
+  "version": "fixture"
+ },
+ "data": {
+  "code": "M10",
+  "name": "Magic 2010",
+  "releaseDate": "2009-07-17",
+  "type": "core",
+  "keyruneCode": "M10",
+  "cards": [
+   {
+    "uuid": "5e1564fe-7534-575d-8bb0-b4d43972186e",
+    "name": "Lightning Bolt",
+    "type": "Instant",
+    "layout": "normal",
+    "colors": [
+     "R"
+    ],
+    "colorIdentity": [
+     "R"
+    ],
+    "number": "146",
+    "rarity": "common",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "M10",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "71f40164-4b45-5939-bc3e-fc90d4144353",
+     "scryfallOracleId": "0702633c-e5ed-54c3-b35f-1c25a0f58a0e",
+     "mcmId": "681655"
+    },
+    "manaCost": "{R}",
+    "text": "Lightning Bolt deals 3 damage to any target.",
+    "flavorText": "The sparkmage shrieked, calling on the rage of the storms of his youth.",
+    "edhrecRank": 12,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Blitzschlag",
+      "type": "Spontanzauber",
+      "text": "Blitzschlag fügt einem Ziel deiner Wahl 3 Schadenspunkte zu."
+     }
+    ]
+   },
+   {
+    "uuid": "ca4bfda5-800c-5914-8267-04a52947165c",
+    "name": "Llanowar Elves",
+    "type": "Creature — Elf Druid",
+    "layout": "normal",
+    "colors": [
+     "G"
+    ],
+    "colorIdentity": [
+     "G"
+    ],
+    "number": "193",
+    "rarity": "common",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 1,
+    "setCode": "M10",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "b9b93cbe-74cd-5d3a-a816-e44076e9e727",
+     "scryfallOracleId": "65bcbbdc-ad01-51cb-954d-c9bebb2150d9",
+     "mcmId": "84501"
+    },
+    "manaCost": "{G}",
+    "text": "{T}: Add {G}.",
+    "power": "1",
+    "toughness": "1",
+    "edhrecRank": 40,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Elfen von Llanowar",
+      "type": "Kreatur — Elf, Druide",
+      "text": "{T}: Erzeuge {G}."
+     }
+    ]
+   },
+   {
+    "uuid": "0188ba15-be11-57fc-986f-9a05dc5b859b",
+    "name": "Shivan Dragon",
+    "type": "Creature — Dragon",
+    "layout": "normal",
+    "colors": [
+     "R"
+    ],
+    "colorIdentity": [
+     "R"
+    ],
+    "number": "157",
+    "rarity": "rare",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [
+     "Flying"
+    ],
+    "manaValue": 6,
+    "setCode": "M10",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "cb6ccb36-85ee-5881-a98e-efa8a84a1213",
+     "scryfallOracleId": "797f1eee-d033-5dcf-8c3d-b1a7268916db",
+     "mcmId": "385440"
+    },
+    "manaCost": "{4}{R}{R}",
+    "text": "Flying (This creature can't be blocked except by creatures with flying or reach.)\n{R}: Shivan Dragon gets +1/+0 until end of turn.",
+    "flavorText": "The undisputed master of the mountains of Shiv.",
+    "power": "5",
+    "toughness": "5",
+    "edhrecRank": 9000,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Shivanischer Drache",
+      "type": "Kreatur — Drache",
+      "text": "Fliegend\n{R}: Der Shivanische Drache erhält +1/+0 bis zum Ende des Zuges."
+     }
+    ]
+   }
+  ]
+ }
+}

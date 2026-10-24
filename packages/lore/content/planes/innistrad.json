@@ -1,0 +1,20 @@
+{
+  "id": "innistrad",
+  "kind": "plane",
+  "name": {
+    "de": "Innistrad",
+    "en": "Innistrad"
+  },
+  "summary": {
+    "de": "Innistrad ist eine Gotik-Horror-Ebene mit Vampiren, Werwoelfen, Geistern und Zombies."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Innistrad",
+      "url": "https://mtg.wiki/page/Innistrad",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

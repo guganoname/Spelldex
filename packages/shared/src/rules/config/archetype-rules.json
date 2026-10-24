@@ -1,0 +1,153 @@
+{
+ "version": 1,
+ "rules": [
+  {
+   "tag": "draw",
+   "label_de": "Kartenziehen",
+   "text": [
+    "\\bdraws? (a|two|three|x|\\d+) cards?\\b",
+    "\\bdraw cards? equal\\b"
+   ]
+  },
+  {
+   "tag": "ramp",
+   "label_de": "Mana-Beschleunigung",
+   "text": [
+    "\\{T\\}: Add \\{",
+    "search your library for (a|up to \\w+) (basic )?land card",
+    "put (a|up to \\w+) land cards? onto the battlefield"
+   ]
+  },
+  {
+   "tag": "removal",
+   "label_de": "Entfernung",
+   "text": [
+    "destroy target (creature|permanent|artifact|enchantment|planeswalker)",
+    "exile target (creature|permanent|artifact|enchantment|planeswalker)",
+    "deals? \\d+ damage to (any target|target creature)"
+   ],
+   "not": [
+    "\\bcounter target\\b"
+   ]
+  },
+  {
+   "tag": "wrath",
+   "label_de": "Massenvernichtung",
+   "text": [
+    "destroy all creatures",
+    "destroy all (nonland )?permanents",
+    "exile all creatures",
+    "each creature gets -\\d+/-\\d+"
+   ]
+  },
+  {
+   "tag": "counterspell",
+   "label_de": "Gegenzauber",
+   "text": [
+    "counter target (spell|noncreature spell|creature spell)"
+   ]
+  },
+  {
+   "tag": "tokens",
+   "label_de": "Spielsteine",
+   "text": [
+    "create (a|an|two|three|x|\\d+) .{0,40}tokens?"
+   ]
+  },
+  {
+   "tag": "aristocrats",
+   "label_de": "Opfer-Synergie",
+   "text": [
+    "sacrifice (another|a|an|two) (creature|permanent)",
+    "whenever (a|another) creature you control dies"
+   ]
+  },
+  {
+   "tag": "graveyard",
+   "label_de": "Friedhof / Reanimation",
+   "text": [
+    "return target creature card from your graveyard to the battlefield",
+    "from your graveyard to the battlefield",
+    "\\bflashback\\b",
+    "\\bunearth\\b"
+   ]
+  },
+  {
+   "tag": "tutor",
+   "label_de": "Bibliothekssuche",
+   "text": [
+    "search your library for a card",
+    "search your library for (a|an) (creature|instant|sorcery|artifact|enchantment) card"
+   ]
+  },
+  {
+   "tag": "lifegain",
+   "label_de": "Lebensgewinn",
+   "text": [
+    "you gain \\d+ life",
+    "\\blifelink\\b"
+   ]
+  },
+  {
+   "tag": "mill",
+   "label_de": "Mühle",
+   "text": [
+    "mills? (\\d+|x|a|two|three) cards?",
+    "target player mills"
+   ]
+  },
+  {
+   "tag": "evasion",
+   "label_de": "Flucht-Fähigkeiten",
+   "keywords": [
+    "Flying",
+    "Menace",
+    "Trample",
+    "Shadow",
+    "Fear",
+    "Intimidate"
+   ]
+  },
+  {
+   "tag": "protection",
+   "label_de": "Schutz",
+   "keywords": [
+    "Hexproof",
+    "Indestructible",
+    "Shroud",
+    "Ward"
+   ]
+  },
+  {
+   "tag": "haste",
+   "label_de": "Aggro",
+   "keywords": [
+    "Haste",
+    "First strike",
+    "Double strike"
+   ]
+  },
+  {
+   "tag": "equipment",
+   "label_de": "Ausrüstung",
+   "type": [
+    "\\bEquipment\\b"
+   ]
+  },
+  {
+   "tag": "landfall",
+   "label_de": "Landfall",
+   "text": [
+    "\\blandfall\\b",
+    "whenever a land enters the battlefield under your control"
+   ]
+  },
+  {
+   "tag": "commander",
+   "label_de": "Commander-fähig",
+   "type": [
+    "Legendary (Creature|Planeswalker)"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,20 @@
+{
+  "id": "merfolk",
+  "kind": "creature-type",
+  "name": {
+    "de": "Meervolk",
+    "en": "Merfolk"
+  },
+  "summary": {
+    "de": "Das Meervolk lebt unter Wasser oder an Kuesten und gehoert meist zum Blauen Mana. Bekannt ist Merfolk-Tribal mit Blockier- und Kartenzieh-Effekten."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Merfolk",
+      "url": "https://mtg.wiki/page/Merfolk",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

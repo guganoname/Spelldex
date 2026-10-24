@@ -1,0 +1,20 @@
+{
+  "id": "ixalan",
+  "kind": "plane",
+  "name": {
+    "de": "Ixalan",
+    "en": "Ixalan"
+  },
+  "summary": {
+    "de": "Ixalan ist ein Dschungelkontinent mit Piraten, Dinosauriern, Vampir-Eroberern, Meervolk und verborgenen Goldstädten."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Ixalan",
+      "url": "https://mtg.wiki/page/Ixalan",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

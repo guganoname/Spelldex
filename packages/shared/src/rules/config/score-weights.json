@@ -1,0 +1,21 @@
+{
+ "weights": {
+  "popularity": 0.45,
+  "combos": 0.2,
+  "formats": 0.25,
+  "market": 0.1
+ },
+ "combosCap": 25,
+ "formatKeys": [
+  "standard",
+  "pioneer",
+  "modern",
+  "legacy",
+  "vintage",
+  "commander",
+  "pauper",
+  "historic",
+  "brawl"
+ ],
+ "marketCapEur": 50
+}

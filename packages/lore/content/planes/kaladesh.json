@@ -1,0 +1,20 @@
+{
+  "id": "kaladesh",
+  "kind": "plane",
+  "name": {
+    "de": "Kaladesh",
+    "en": "Kaladesh"
+  },
+  "summary": {
+    "de": "Kaladesh ist eine Erfinderwelt voller Aether-Kraft, Konstrukte, Fahrzeuge und Tüftler."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Kaladesh",
+      "url": "https://mtg.wiki/page/Kaladesh",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

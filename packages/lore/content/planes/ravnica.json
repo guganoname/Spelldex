@@ -1,0 +1,20 @@
+{
+  "id": "ravnica",
+  "kind": "plane",
+  "name": {
+    "de": "Ravnica",
+    "en": "Ravnica"
+  },
+  "summary": {
+    "de": "Ravnica ist eine Weltstadt, regiert von zehn Gilden, die jeweils zwei Manafarben verbinden."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Ravnica",
+      "url": "https://mtg.wiki/page/Ravnica",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

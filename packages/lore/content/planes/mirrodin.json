@@ -1,0 +1,20 @@
+{
+  "id": "mirrodin",
+  "kind": "plane",
+  "name": {
+    "de": "Mirrodin",
+    "en": "Mirrodin"
+  },
+  "summary": {
+    "de": "Mirrodin ist eine künstliche Metallebene, die später von den Phyrexianern erobert wird."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Mirrodin",
+      "url": "https://mtg.wiki/page/Mirrodin",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

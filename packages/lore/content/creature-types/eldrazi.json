@@ -1,0 +1,20 @@
+{
+  "id": "eldrazi",
+  "kind": "creature-type",
+  "name": {
+    "de": "Eldrazi",
+    "en": "Eldrazi"
+  },
+  "summary": {
+    "de": "Die Eldrazi sind kosmische Wesen jenseits des Verstaendnisses, die auf Zendikar eingesperrt waren und Ebenen aussaugen. Im Spiel sind sie riesige, farblose Kreaturen."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Eldrazi",
+      "url": "https://mtg.wiki/page/Eldrazi",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

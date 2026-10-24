@@ -1,0 +1,14 @@
+{
+  "name": "@spelldex/design",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PLACEHOLDER until the design thread delivers: tokens, feedback layer (sound + haptics), skeuomorphic CSS",
+  "exports": {
+    "./tokens": "./src/tokens/tokens.ts",
+    "./tokens.css": "./src/tokens/tokens.css",
+    "./feedback": "./src/feedback/index.ts",
+    "./components/*": "./src/components/*"
+  },
+  "scripts": { "typecheck": "tsc -p tsconfig.json" }
+}

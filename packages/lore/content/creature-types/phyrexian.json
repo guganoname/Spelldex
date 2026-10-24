@@ -1,0 +1,20 @@
+{
+  "id": "phyrexian",
+  "kind": "creature-type",
+  "name": {
+    "de": "Phyrexianer",
+    "en": "Phyrexian"
+  },
+  "summary": {
+    "de": "Phyrexianer sind eine Rasse aus Maschine und Fleisch, die aus der Ebene Phyrexia stammt und das Multiversum 'komplettieren' will. Sie sind die zentralen Gegner mehrerer Kartenblocks."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Phyrexian",
+      "url": "https://mtg.wiki/page/Phyrexian",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

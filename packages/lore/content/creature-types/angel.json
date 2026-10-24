@@ -1,0 +1,20 @@
+{
+  "id": "angel",
+  "kind": "creature-type",
+  "name": {
+    "de": "Engel",
+    "en": "Angel"
+  },
+  "summary": {
+    "de": "Engel sind geflügelte Wesen des Weissen Manas und stehen meist fuer Ordnung, Schutz und Gerechtigkeit; es gibt aber auch gefallene und boese Engel, vor allem in Innistrad."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Angel",
+      "url": "https://mtg.wiki/page/Angel",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

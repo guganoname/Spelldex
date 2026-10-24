@@ -1,0 +1,20 @@
+{
+  "id": "dragon",
+  "kind": "creature-type",
+  "name": {
+    "de": "Drache",
+    "en": "Dragon"
+  },
+  "summary": {
+    "de": "Drachen gehoeren zu den maechtigsten Kreaturen des Multiversums. Auf vielen Ebenen sind sie uralte, feuerspeiende Herrscher; in Tarkir praegten sie ganze Clans. Im Spiel stehen sie fuer grosse Flieger mit hohem Preis."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Dragon",
+      "url": "https://mtg.wiki/page/Dragon",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

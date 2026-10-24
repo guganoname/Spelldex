@@ -1,0 +1,22 @@
+{
+  "name": "spelldex",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @spelldex/web dev",
+    "build": "pnpm --filter @spelldex/web build",
+    "preview": "pnpm --filter @spelldex/web preview",
+    "data:fixture": "pnpm --filter @spelldex/data-build fixture",
+    "data:build": "pnpm --filter @spelldex/data-build build",
+    "typecheck": "pnpm -r --parallel typecheck",
+    "test": "vitest run",
+    "check": "pnpm typecheck && pnpm test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "~5.9.3",
+    "vitest": "^5.0.5"
+  }
+}

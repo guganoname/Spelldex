@@ -1,0 +1,21 @@
+{
+  "name": "@spelldex/data-build",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nightly data build: MTGJSON (+ Spellbook, lore, scan index) -> static artifacts + manifest.json",
+  "scripts": {
+    "build": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts",
+    "fixture": "node --experimental-strip-types --disable-warning=ExperimentalWarning src/cli.ts --mtgjson fixtures/mtgjson --out ../../apps/web/public/data",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@spelldex/shared": "workspace:*",
+    "stream-chain": "^2.2.5",
+    "stream-json": "^1.9.1"
+  },
+  "devDependencies": {
+    "@types/stream-chain": "^2.1.0",
+    "@types/stream-json": "^1.7.8"
+  }
+}

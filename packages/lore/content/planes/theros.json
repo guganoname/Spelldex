@@ -1,0 +1,20 @@
+{
+  "id": "theros",
+  "kind": "plane",
+  "name": {
+    "de": "Theros",
+    "en": "Theros"
+  },
+  "summary": {
+    "de": "Theros ist eine Welt nach antikem griechischem Vorbild, in der Götter, Helden und Monster das Schicksal der Sterblichen prägen."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Theros",
+      "url": "https://mtg.wiki/page/Theros",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

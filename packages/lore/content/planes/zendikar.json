@@ -1,0 +1,20 @@
+{
+  "id": "zendikar",
+  "kind": "plane",
+  "name": {
+    "de": "Zendikar",
+    "en": "Zendikar"
+  },
+  "summary": {
+    "de": "Zendikar ist die Landfall-Welt voller schwebender Inseln, Abenteuer und der Bedrohung durch die Eldrazi."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Zendikar",
+      "url": "https://mtg.wiki/page/Zendikar",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

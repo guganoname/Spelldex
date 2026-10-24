@@ -1,0 +1,63 @@
+{
+ "meta": {
+  "version": "fixture"
+ },
+ "data": {
+  "code": "ZEN",
+  "name": "Zendikar",
+  "releaseDate": "2009-10-02",
+  "type": "expansion",
+  "keyruneCode": "ZEN",
+  "cards": [
+   {
+    "uuid": "865f90fc-b6ed-5444-a7ab-3ee2a688e688",
+    "name": "Sorin Markov",
+    "type": "Legendary Planeswalker — Sorin",
+    "layout": "normal",
+    "colors": [
+     "B"
+    ],
+    "colorIdentity": [
+     "B"
+    ],
+    "number": "111",
+    "rarity": "mythic",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 6,
+    "setCode": "ZEN",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "41041d36-d929-5e60-96f5-db02605e7284",
+     "scryfallOracleId": "20e31289-6849-51b4-a622-f750345e3fed",
+     "mcmId": "17778"
+    },
+    "manaCost": "{3}{B}{B}{B}",
+    "text": "+2: Sorin Markov deals 2 damage to any target and you gain 2 life.\n−3: Target opponent's life total becomes 10.\n−7: You control target player during that player's next turn.",
+    "loyalty": "4",
+    "edhrecRank": 8000,
+    "foreignData": [
+     {
+      "language": "German",
+      "name": "Sorin Markov",
+      "type": "Legendärer Planeswalker — Sorin",
+      "text": "+2: Sorin Markov fügt einem Ziel deiner Wahl 2 Schadenspunkte zu und du erhältst 2 Lebenspunkte dazu."
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,99 @@
+{
+ "meta": {
+  "version": "fixture"
+ },
+ "data": {
+  "code": "APC",
+  "name": "Apocalypse",
+  "releaseDate": "2001-06-04",
+  "type": "expansion",
+  "keyruneCode": "APC",
+  "cards": [
+   {
+    "uuid": "d67745aa-ef3b-569c-9ca7-538e6d1dbdf8",
+    "name": "Fire // Ice",
+    "type": "Instant",
+    "layout": "split",
+    "colors": [
+     "R"
+    ],
+    "colorIdentity": [
+     "U",
+     "R"
+    ],
+    "number": "128a",
+    "rarity": "uncommon",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 4,
+    "setCode": "APC",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "50cd264f-2655-5319-97ec-eec793c34184",
+     "scryfallOracleId": "aaf0661e-4981-558b-a6cd-b630ef340d66",
+     "mcmId": "124570"
+    },
+    "manaCost": "{1}{R}",
+    "text": "Fire deals 2 damage divided as you choose among one or two targets.",
+    "faceName": "Fire",
+    "side": "a",
+    "edhrecRank": 2500
+   },
+   {
+    "uuid": "7fd304f0-29ad-5396-b209-6e50c15490e7",
+    "name": "Fire // Ice",
+    "type": "Instant",
+    "layout": "split",
+    "colors": [
+     "U"
+    ],
+    "colorIdentity": [
+     "U",
+     "R"
+    ],
+    "number": "128a",
+    "rarity": "uncommon",
+    "artist": "Fixture Artist",
+    "legalities": {
+     "commander": "Legal",
+     "legacy": "Legal",
+     "vintage": "Legal",
+     "modern": "Legal"
+    },
+    "finishes": [
+     "nonfoil",
+     "foil"
+    ],
+    "keywords": [],
+    "manaValue": 4,
+    "setCode": "APC",
+    "availability": [
+     "paper"
+    ],
+    "isPromo": false,
+    "identifiers": {
+     "scryfallId": "50cd264f-2655-5319-97ec-eec793c34184",
+     "scryfallOracleId": "aaf0661e-4981-558b-a6cd-b630ef340d66",
+     "mcmId": "124570"
+    },
+    "manaCost": "{1}{U}",
+    "text": "Tap target permanent.\nDraw a card.",
+    "faceName": "Ice",
+    "side": "b"
+   }
+  ]
+ }
+}

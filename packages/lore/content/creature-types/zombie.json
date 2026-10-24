@@ -1,0 +1,20 @@
+{
+  "id": "zombie",
+  "kind": "creature-type",
+  "name": {
+    "de": "Zombie",
+    "en": "Zombie"
+  },
+  "summary": {
+    "de": "Zombies sind wiederbelebte Tote im Schwarzen Mana. Sie dienen als zaehe, billige Kreaturen und treten auf Ebenen wie Innistrad oder Amonkhet in ganz eigenen Formen auf."
+  },
+  "status": "draft",
+  "sources": [
+    {
+      "title": "MTG Wiki: Zombie",
+      "url": "https://mtg.wiki/page/Zombie",
+      "referenceOnly": true,
+      "license": "CC BY-NC-SA 4.0"
+    }
+  ]
+}

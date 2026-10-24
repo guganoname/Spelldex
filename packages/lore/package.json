@@ -1,0 +1,8 @@
+{
+  "name": "@spelldex/lore",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Curated lore content (owned by the lore thread); bundled by @spelldex/data-build",
+  "scripts": { "typecheck": "echo no-ts" }
+}
