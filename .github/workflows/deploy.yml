@@ -59,7 +59,7 @@ jobs:
 
       - name: App bauen
         env:
-          VITE_BASE: /spelldex/
+          VITE_BASE: /${{ github.event.repository.name }}/ # Pages-Pfad folgt der Schreibweise des Repos (Spelldex)
         run: pnpm build
 
       - uses: actions/configure-pages@v5
