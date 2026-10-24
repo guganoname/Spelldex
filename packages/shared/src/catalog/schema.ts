@@ -2,7 +2,8 @@
  * Catalog schema (catalog.db). Written by @spelldex/data-build, read-only in the app.
  * Bump CATALOG_SCHEMA on any breaking change; the manifest carries minAppSchema.
  *
- * Conventions: colors are stored as a sorted WUBRG string ("" = colorless), lists as JSON text.
+ * Conventions: colors are stored as a sorted WUBRG string ("" = colorless), lists as JSON text,
+ * legalities only for formats in FORMATS and only when not "not_legal" (keeps the file small).
  */
 
 export const CATALOG_SCHEMA = 1;
@@ -55,7 +56,6 @@ CREATE TABLE oracle (
 CREATE TABLE printing (
   scryfall_id      TEXT PRIMARY KEY,
   oracle_id        TEXT NOT NULL,
-  mtgjson_uuid     TEXT NOT NULL,
   set_code         TEXT NOT NULL,
   collector_number TEXT NOT NULL,
   number_sort      INTEGER NOT NULL,
@@ -96,8 +96,7 @@ CREATE TABLE oracle_combo (
 CREATE VIRTUAL TABLE oracle_fts USING fts5(
   name, name_de, type_line, oracle_text,
   content='oracle', content_rowid='rowid',
-  tokenize='unicode61 remove_diacritics 2',
-  prefix='2 3'
+  tokenize='unicode61 remove_diacritics 2'
 );
 `;
 

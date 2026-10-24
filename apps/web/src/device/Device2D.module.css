@@ -1,0 +1,192 @@
+/* 2D shell. Light comes from the top left everywhere. Materials only on the case and controls. */
+.stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: max(env(safe-area-inset-top), 8px) 8px max(env(safe-area-inset-bottom), 8px);
+  background: radial-gradient(120% 80% at 30% 10%, #2a2230, #0b0a0d 70%);
+  perspective: 1600px;
+  touch-action: manipulation;
+  --accent: var(--sd-mana-c);
+}
+.stage[data-accent='W'] { --accent: var(--sd-mana-w); }
+.stage[data-accent='U'] { --accent: var(--sd-mana-u); }
+.stage[data-accent='B'] { --accent: var(--sd-mana-b); }
+.stage[data-accent='R'] { --accent: var(--sd-mana-r); }
+.stage[data-accent='G'] { --accent: var(--sd-mana-g); }
+.stage[data-accent='multi'] { --accent: var(--sd-mana-m); }
+
+/* 9:19.5 like a phone screen, never wider than the viewport. */
+.device {
+  position: relative;
+  height: min(100%, calc((100vw - 16px) * 19.5 / 9));
+  aspect-ratio: 9 / 19.5;
+  display: grid;
+  grid-template-rows: 44fr 3fr 53fr;
+  transform-style: preserve-3d;
+}
+
+.lid, .body {
+  position: relative;
+  border-radius: 22px;
+  background:
+    linear-gradient(160deg, rgb(255 255 255 / 0.08), transparent 40%),
+    repeating-radial-gradient(circle at 20% 20%, rgb(0 0 0 / 0.08) 0 2px, transparent 2px 6px),
+    var(--sd-leather);
+  box-shadow:
+    inset 0 0 0 3px var(--sd-brass-dark, #6e5530),
+    inset 0 0 0 5px var(--sd-brass),
+    0 18px 40px rgb(0 0 0 / 0.6);
+}
+
+.lid {
+  transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  z-index: 2;
+  touch-action: none;
+}
+.lidInner {
+  position: absolute;
+  inset: 14px;
+  display: grid;
+}
+.hingeTop { display: none; }
+
+/* Closed cover: the back side of the lid, seen when folded over the body. */
+.cover {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 18px;
+  transform: rotateX(180deg);
+  backface-visibility: hidden;
+  background:
+    radial-gradient(60% 40% at 50% 45%, rgb(242 200 107 / 0.12), transparent),
+    var(--sd-leather);
+  box-shadow: inset 0 0 0 5px var(--sd-brass);
+}
+.seal {
+  width: 112px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 0;
+  background: radial-gradient(circle at 35% 30%, #e2c07c, var(--sd-brass) 45%, var(--sd-brass-dark, #6e5530));
+  box-shadow: 0 6px 14px rgb(0 0 0 / 0.5), inset 0 2px 2px rgb(255 255 255 / 0.4);
+  color: #3a2a12;
+  font-size: 44px;
+  cursor: pointer;
+}
+.seal:active { transform: translateY(2px); box-shadow: inset 0 3px 8px rgb(0 0 0 / 0.5); }
+.sealRune { filter: drop-shadow(0 0 6px var(--sd-rune-glow)); }
+.coverTitle {
+  margin: 0;
+  font-family: var(--sd-font-display);
+  letter-spacing: 0.4em;
+  color: var(--sd-brass);
+  text-shadow: 0 1px 0 rgb(0 0 0 / 0.6);
+}
+
+.hinge {
+  position: relative;
+  z-index: 3;
+  margin: 0 18px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e2c07c, var(--sd-brass) 40%, var(--sd-brass-dark, #6e5530));
+}
+.hingeKnob { position: absolute; inset: 0; opacity: 0; border: 0; }
+
+.body {
+  display: grid;
+  grid-template-rows: 1fr auto auto;
+  gap: 10px;
+  padding: 14px;
+}
+
+.glass {
+  position: relative;
+  border-radius: var(--sd-radius-screen);
+  overflow: hidden;
+  background: color-mix(in oklab, var(--sd-screen-surface) 88%, var(--accent) 12%);
+  box-shadow: inset 0 0 0 2px #000, inset 0 0 24px rgb(0 0 0 / 0.8), 0 0 0 2px var(--sd-brass-dark, #6e5530);
+  transition: background 400ms;
+}
+.glass::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(155deg, rgb(255 255 255 / 0.07), transparent 35%);
+}
+.screen {
+  position: absolute;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--sd-screen-ink);
+  font-family: var(--sd-font-ui);
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+}
+.dpad {
+  position: relative;
+  width: 88px;
+  aspect-ratio: 1;
+}
+.dkey, .small, .scan, .gem {
+  border: 0;
+  cursor: pointer;
+  background: linear-gradient(160deg, #3b2d22, #1d1510);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 3px 0 #0c0806, 0 4px 8px rgb(0 0 0 / 0.5);
+  color: var(--sd-brass);
+}
+.dkey:active, .small:active, .scan:active, .gem:active {
+  transform: translateY(2px);
+  box-shadow: inset 0 2px 6px rgb(0 0 0 / 0.6);
+}
+.dkey { position: absolute; width: 32%; height: 32%; border-radius: 6px; }
+.up { left: 34%; top: 0; }
+.down { left: 34%; bottom: 0; }
+.left { left: 0; top: 34%; }
+.right { right: 0; top: 34%; }
+.scan {
+  width: 76px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  font-size: 34px;
+  background: radial-gradient(circle at 35% 30%, #e2c07c, var(--sd-brass) 45%, var(--sd-brass-dark, #6e5530));
+  color: #2b1d0f;
+}
+.smallKeys { display: flex; justify-content: flex-end; gap: 10px; }
+.small { width: 44px; height: 44px; border-radius: 12px; font-size: 22px; }
+
+.gems { display: flex; justify-content: space-around; padding: 2px 6px 4px; }
+.gem { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+.gemCore {
+  width: 22px;
+  height: 22px;
+  border-radius: 40% 40% 50% 50%;
+  background: var(--gem);
+  opacity: 0.55;
+  box-shadow: inset 0 -3px 4px rgb(0 0 0 / 0.4), inset 0 2px 2px rgb(255 255 255 / 0.4);
+  transition: opacity 200ms, box-shadow 200ms;
+}
+.gemCore[data-active] { opacity: 1; box-shadow: 0 0 14px var(--gem), inset 0 2px 2px rgb(255 255 255 / 0.5); }
+.gem_w { --gem: var(--sd-mana-w); }
+.gem_u { --gem: var(--sd-mana-u); }
+.gem_b { --gem: var(--sd-mana-b); }
+.gem_r { --gem: var(--sd-mana-r); }
+.gem_g { --gem: var(--sd-mana-g); }
+
+@media (prefers-reduced-motion: reduce) {
+  .glass { transition: none; }
+}

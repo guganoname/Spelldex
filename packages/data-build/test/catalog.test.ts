@@ -24,7 +24,7 @@ let db: ReturnType<typeof nodeDb>;
 beforeAll(async () => {
   dir = mkdtempSync(join(tmpdir(), 'spelldex-'));
   const path = join(dir, 'catalog.db');
-  const stats = await buildCatalog(path, {
+  const { stats } = await buildCatalog(path, {
     sets: readMtgjsonSets(fixtures),
     setPlanes: { ISD: 'innistrad', ZEN: 'zendikar' },
     rules,

@@ -8,10 +8,17 @@ export function sha256(buf: Uint8Array): string {
   return createHash('sha256').update(buf).digest('hex');
 }
 
-/** Writes `buf` (gzip if asked) to outDir/name and returns its manifest entry. */
+/**
+ * Writes `buf` (gzip if asked) to outDir and returns its manifest entry. The file name carries
+ * the content hash (immutable, cacheable forever). Gzipped files get the extension ".gzip", not
+ * ".gz": static servers and CDNs often add `Content-Encoding: gzip` for ".gz", the browser then
+ * inflates transparently and the client-side hash check fails.
+ */
 export async function writeArtifact(outDir: string, name: string, buf: Uint8Array, gzip = false): Promise<ArtifactFile> {
   const data = gzip ? gzipSync(buf, { level: 9 }) : buf;
-  const file = gzip ? `${name}.gz` : name;
+  const dot = name.lastIndexOf('.');
+  const hashed = `${name.slice(0, dot)}.${sha256(data).slice(0, 12)}${name.slice(dot)}`;
+  const file = gzip ? `${hashed}.gzip` : hashed;
   await writeFile(`${outDir}/${file}`, data);
   return { path: basename(file), bytes: data.byteLength, sha256: sha256(data), ...(gzip ? { encoding: 'gzip' as const } : {}) };
 }

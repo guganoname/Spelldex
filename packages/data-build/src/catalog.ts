@@ -6,7 +6,7 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   CATALOG_DDL, CATALOG_FINALIZE, CATALOG_SCHEMA, collectorNumberSort, encodeColors,
 } from '@spelldex/shared/catalog';
-import type { CardFace } from '@spelldex/shared/contracts';
+import { FORMATS, type CardFace } from '@spelldex/shared/contracts';
 import {
   makeStrengthScorer, tagRules, type ComboRef, type RuleSet, type ScoreConfig,
 } from '@spelldex/shared/rules';
@@ -20,11 +20,19 @@ export interface CatalogInput {
   sets: AsyncIterable<MtgjsonSet>;
   setPlanes?: Record<string, string | null>;
   combos?: Map<string, ComboRef[]>;
+  /** Total combos per oracle id (combos holds only the top few). */
+  comboCounts?: Map<string, number>;
   rules: RuleSet;
   score: ScoreConfig;
   /** Latest Cardmarket price per MTGJSON uuid, if the price import ran. */
   prices?: Map<string, number>;
   version: string;
+}
+
+export interface CatalogResult {
+  stats: CatalogStats;
+  /** MTGJSON uuid -> Scryfall id, for artifacts keyed by printing (price shards). */
+  uuidToScryfall: Map<string, string>;
 }
 
 export interface CatalogStats {
@@ -45,13 +53,14 @@ interface OracleAcc {
 }
 
 const legality = (v: string) => v.toLowerCase().replace(/\s+/g, '_');
+const SHOWN_FORMATS = new Set<string>(FORMATS);
 
 function joinFaces<T>(faces: MtgjsonCard[], f: (c: MtgjsonCard) => T | undefined, sep: string): string | null {
   const parts = faces.map(f).filter((v): v is T => v != null && v !== '');
   return parts.length ? parts.join(sep) : null;
 }
 
-export async function buildCatalog(dbPath: string, input: CatalogInput): Promise<CatalogStats> {
+export async function buildCatalog(dbPath: string, input: CatalogInput): Promise<CatalogResult> {
   const db = new DatabaseSync(dbPath);
   db.exec('PRAGMA journal_mode = OFF; PRAGMA synchronous = OFF; PRAGMA page_size = 4096;');
   db.exec(CATALOG_DDL);
@@ -60,12 +69,13 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
     `INSERT INTO sets (code, name, release_date, type, parent_code, plane, keyrune_code) VALUES (?, ?, ?, ?, ?, ?, ?)`,
   );
   const insPrint = db.prepare(
-    `INSERT OR IGNORE INTO printing (scryfall_id, oracle_id, mtgjson_uuid, set_code, collector_number, number_sort,
+    `INSERT OR IGNORE INTO printing (scryfall_id, oracle_id, set_code, collector_number, number_sort,
        rarity, artist, flavor_text, frame_version, finishes, is_promo, is_variant, has_back_face, cardmarket_id)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
 
   const oracles = new Map<string, OracleAcc>();
+  const uuidToScryfall = new Map<string, string>();
   const stats: CatalogStats = { sets: 0, printings: 0, cards: 0, combos: 0, skipped: 0 };
 
   db.exec('BEGIN');
@@ -98,13 +108,14 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
         !!c.isAlternative || c.borderColor === 'borderless' ||
         !!c.frameEffects?.some((e) => e === 'showcase' || e === 'extendedart');
       insPrint.run(
-        sid, oid, c.uuid, code, c.number, collectorNumberSort(c.number), c.rarity,
+        sid, oid, code, c.number, collectorNumberSort(c.number), c.rarity,
         [...new Set(faces.map((f) => f.artist).filter(Boolean))].join(' & ') || null,
         joinFaces(faces, (f) => f.flavorText, '\n'),
         c.frameVersion ?? null, JSON.stringify(c.finishes ?? []), c.isPromo ? 1 : 0, isVariant ? 1 : 0,
         BACK_FACE_LAYOUTS.has(c.layout) ? 1 : 0, c.identifiers.mcmId ? Number(c.identifiers.mcmId) : null,
       );
       stats.printings++;
+      for (const f of faces) uuidToScryfall.set(f.uuid, sid);
 
       const acc = oracles.get(oid) ?? { oracleId: oid, faces, edhrecRank: null, best: null, de: null };
       if (c.edhrecRank != null) acc.edhrecRank = Math.min(acc.edhrecRank ?? Infinity, c.edhrecRank);
@@ -162,12 +173,16 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
     const keywords = [...new Set(faces.flatMap((f) => f.keywords ?? []))];
     const text = joinFaces(faces, (f) => f.text, '\n//\n');
     const typeLine = joinFaces(faces, (f) => f.type, ' // ') ?? c.type;
-    const legalities = Object.fromEntries(Object.entries(c.legalities ?? {}).map(([k, v]) => [k, legality(v)]));
+    const legalities = Object.fromEntries(
+      Object.entries(c.legalities ?? {})
+        .map(([k, v]) => [k, legality(v)] as const)
+        .filter(([k, v]) => SHOWN_FORMATS.has(k) && v !== 'not_legal'),
+    );
     const combos = input.combos?.get(acc.oracleId) ?? [];
     const tags = tag({ text: text ?? '', type: typeLine, keywords });
     const strength = scorer({
       edhrecRank: acc.edhrecRank,
-      comboCount: combos.length,
+      comboCount: input.comboCounts?.get(acc.oracleId) ?? combos.length,
       legalities,
       priceEur: input.prices?.get(c.uuid) ?? null,
     });
@@ -180,7 +195,8 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
       c.power ?? null, c.toughness ?? null, c.loyalty ?? null, c.defense ?? null,
       JSON.stringify(keywords), JSON.stringify(legalities), c.layout,
       faceRows ? JSON.stringify(faceRows) : null, acc.edhrecRank, JSON.stringify(tags),
-      strength.score, JSON.stringify(strength.parts), combos.length, acc.best?.scryfallId ?? null,
+      strength.score, JSON.stringify(strength.parts), input.comboCounts?.get(acc.oracleId) ?? combos.length,
+      acc.best?.scryfallId ?? null,
     );
     for (const t of tags) insTag.run(t, acc.oracleId);
     for (const combo of combos) {
@@ -203,5 +219,5 @@ export async function buildCatalog(dbPath: string, input: CatalogInput): Promise
   db.exec(CATALOG_FINALIZE);
   db.exec('VACUUM');
   db.close();
-  return stats;
+  return { stats, uuidToScryfall };
 }

@@ -4,11 +4,10 @@
  * - a directory of per-set files `{ data: Set }` (fixtures, partial builds)
  * Only the fields we use are typed. Docs: https://mtgjson.com/data-models/
  */
-import { createReadStream } from 'node:fs';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { createGunzip } from 'node:zlib';
 import { stat } from 'node:fs/promises';
+import { streamJson } from './streams.ts';
 
 export interface MtgjsonForeign {
   language: string;
@@ -76,18 +75,5 @@ export async function* readMtgjsonSets(path: string): AsyncGenerator<MtgjsonSet>
     }
     return;
   }
-  // Lazy import keeps the fixture path dependency-free.
-  const [{ default: StreamChain }, { parser }, { pick }, { streamObject }] = await Promise.all([
-    import('stream-chain'),
-    import('stream-json'),
-    import('stream-json/filters/Pick.js'),
-    import('stream-json/streamers/StreamObject.js'),
-  ]);
-  const stages: unknown[] = [createReadStream(path)];
-  if (path.endsWith('.gz')) stages.push(createGunzip());
-  stages.push(parser(), pick({ filter: 'data' }), streamObject());
-  const pipeline = StreamChain.chain(stages as never);
-  for await (const item of pipeline as AsyncIterable<{ key: string; value: MtgjsonSet }>) {
-    yield item.value;
-  }
+  for await (const { value } of streamJson<MtgjsonSet>(path, 'data', 'object')) yield value;
 }
