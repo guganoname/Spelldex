@@ -57,6 +57,8 @@ export interface Codex {
   setGemGlow(index: number, intensity: number | null): void;
   setScanning(on: boolean): void;
   openClip(durationSeconds?: number): THREE.AnimationClip;
+  /** Environment, AgX tone mapping and key light the materials are tuned for. Returns cleanup. */
+  stage(scene: THREE.Scene, renderer: THREE.WebGLRenderer): () => void;
   dispose(): void;
 }
 
@@ -67,3 +69,8 @@ export declare function createCodex(opts?: { tokens?: DeepPartial<CodexTokens>; 
 export declare function quadToMatrix3d(width: number, height: number, corners: readonly CodexPoint[]): string;
 export declare function lidEvents(prev: number, next: number): Array<'latch-release' | 'lid-detent'>;
 export declare function codexEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture;
+export declare function tokensFromDesign(design?: {
+  color?: { mana?: Record<string, string> };
+  material?: Record<string, CodexMaterialToken>;
+  gem?: { emissiveIntensity?: { rest: number; active: number } };
+}): DeepPartial<CodexTokens>;
