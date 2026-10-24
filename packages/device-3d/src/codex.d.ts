@@ -66,3 +66,4 @@ export declare const BUTTONS: readonly CodexButton[];
 export declare function createCodex(opts?: { tokens?: DeepPartial<CodexTokens>; fontFamily?: string }): Codex;
 export declare function quadToMatrix3d(width: number, height: number, corners: readonly CodexPoint[]): string;
 export declare function lidEvents(prev: number, next: number): Array<'latch-release' | 'lid-detent'>;
+export declare function codexEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture;

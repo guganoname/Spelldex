@@ -8,6 +8,7 @@
 // allowed) to poses.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import {
   leatherMaps, brassMaps, runeStripMaps, runeRingMaps, titleMaps, iconMaps,
   haloTexture, screenGlowTexture,
@@ -600,6 +601,20 @@ export function createCodex(opts = {}) {
     setOpen, update, frameCamera, getScreenRects, pickButton, pickPart, pressButton,
     setActiveTab, setGemGlow, setScanning, openClip, dispose,
   };
+}
+
+/**
+ * Studio reflections the brass is tuned for. Metals without an environment map render black, so
+ * hosts set this as scene.environment (with scene.environmentIntensity about 0.7, AgX tone
+ * mapping, exposure about 0.92 and a warm key light from the top left).
+ */
+export function codexEnvironment(renderer) {
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const env = new RoomEnvironment();
+  const texture = pmrem.fromScene(env, 0.04).texture;
+  env.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
+  pmrem.dispose();
+  return texture;
 }
 
 /** CSS matrix3d that maps a w×h element (transform-origin 0 0) onto four corners TL,TR,BR,BL. */

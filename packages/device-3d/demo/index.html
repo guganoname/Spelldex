@@ -175,8 +175,7 @@ body {
 </script>
 <script type="module">
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { createCodex, quadToMatrix3d, lidEvents } from '../src/codex.js';
+import { createCodex, codexEnvironment, quadToMatrix3d, lidEvents } from '../src/codex.js';
 
 const PANELS = [
   `<span class="sample">Beispieldaten</span>
@@ -251,8 +250,7 @@ async function boot() {
   stage.prepend(renderer.domElement);
 
   const scene = new THREE.Scene();
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  scene.environment = codexEnvironment(renderer);
   scene.environmentIntensity = 0.7;
   const key = new THREE.DirectionalLight('#ffe7c2', 2.2);
   key.position.set(-6, 12, 14); // top left, as in the design system
