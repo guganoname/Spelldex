@@ -1,0 +1,32 @@
+/* The lens: camera view inside the top screen, with the card outline locking on. */
+.lens { position: relative; width: 100%; height: 100%; min-height: 220px; overflow: hidden; background: #050407; }
+.video, .overlay { position: absolute; inset: 0; width: 100%; height: 100%; }
+.video { object-fit: cover; }
+.overlay { z-index: 1; pointer-events: none; }
+.quad {
+  fill: rgb(242 200 107 / 0.06);
+  stroke: var(--sd-rune-glow, #f2c86b);
+  stroke-width: 6;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  transition: fill 160ms ease-out;
+}
+.quad[data-locked='true'] { fill: rgb(242 200 107 / 0.22); stroke-width: 8; }
+.veil {
+  z-index: 2;
+  position: absolute; inset: 0; display: grid; place-content: center; gap: 14px; padding: 18px; text-align: center;
+  color: var(--sd-screen-ink); background: radial-gradient(circle at 50% 40%, rgb(242 200 107 / 0.10), transparent 70%);
+}
+.veil p { margin: 0; font-size: 14px; color: var(--sd-screen-ink-muted); }
+.openButton, .torch, .candidates button {
+  font: inherit; color: var(--sd-screen-ink); cursor: pointer; border-radius: 999px;
+  border: 1px solid rgb(233 217 168 / 0.35); background: rgb(0 0 0 / 0.45);
+}
+.openButton { justify-self: center; padding: 10px 20px; font-family: var(--sd-font-display); letter-spacing: 0.04em; }
+.hud { z-index: 2; position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+.hint { font-size: 12px; padding: 4px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.55); color: var(--sd-screen-ink); }
+.torch { margin-left: auto; padding: 6px 12px; font-size: 12px; }
+.torch[aria-pressed='true'] { border-color: var(--sd-rune-glow, #f2c86b); background: rgb(242 200 107 / 0.2); }
+.candidates { z-index: 2; position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.candidates button { padding: 6px 12px; font-size: 13px; }

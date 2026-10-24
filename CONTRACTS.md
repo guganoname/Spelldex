@@ -63,7 +63,7 @@ Schlüssel: Druck = Scryfall-ID, Karte = Scryfall-Oracle-ID. Tags, Stärke und K
 
 ## Scanner (`@spelldex/scanner`)
 
-Worker `./worker` per Comlink mit `ScanWorkerApi`, `./camera` für getUserMedia/Taschenlampe im Haupt-Thread. scan-index.bin: Magic `SPLX`, u16 Version, u32 N, dann N × 32 Byte (16 Byte Scryfall-UUID, 8 Byte Art-Hash, 8 Byte Voll-Hash), little endian. OpenCV.js/Tesseract lazy beim ersten Scan, nicht im Precache. Im Build: `packages/data-build/src/scan-index/index.ts` exportiert `buildScanIndex({catalogPath, outDir, previousIndexPath?}) → ArtifactFile|null`.
+Worker `./worker` per Comlink mit `ScanWorkerApi`, `./camera` (`startCameraScan`) für getUserMedia/Taschenlampe/Frame-Pumpe im Haupt-Thread, `scanFeedback(prev, next)` übersetzt Ergebnisse in Feedback-Ereignisse (`scan-lock`, `scan-lost`, `scan-hit`, `scan-ambiguous`, `scan-hint-light`). scan-index.bin (Codec in `packages/shared/src/scan/index-codec.ts`): Magic `SPLX`, u16 Version, u16 Flags, u32 N, u32 Stringbytes, dann spaltenweise N × 16 Byte Scryfall-UUID, N × 40 Byte Hashes (256-Bit-Art-Hash + 64-Bit-Vollkarten-Hash), N × u32 Illustrationsgruppe, Stringtabelle `SET/NUMMER[/b]`, little endian (~6 MB bei 100k Seiten). OpenCV.js/Tesseract lazy beim ersten Scan, nicht im Precache. Im Build: `packages/data-build/src/scan-index/index.ts` exportiert `buildScanIndex({catalogPath, outDir, previousIndexPath?}) → ArtifactFile|null` (null, wenn kein Kartenbild ladbar ist, z. B. offline). Reprints erkennt der Index genau, wenn `printing.illustration_id` (MTGJSON `identifiers.scryfallIllustrationId`) im Katalog steht; sonst gruppiert er nach Oracle-ID + Künstler.
 
 ## Daten/Lore
 

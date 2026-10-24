@@ -3,7 +3,20 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "PLACEHOLDER until the scanner thread delivers: scan worker (Comlink) + camera.ts",
+  "description": "Card scanner without AI at runtime: OpenCV.js outline + perspective warp, perceptual hash lookup in scan-index.bin, optional Tesseract.js for reprints",
   "exports": { ".": "./src/index.ts", "./worker": "./src/worker.ts", "./camera": "./src/camera.ts" },
-  "scripts": { "typecheck": "tsc -p tsconfig.json" }
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "bench": "node --experimental-strip-types --disable-warning=ExperimentalWarning bench/run.ts"
+  },
+  "dependencies": {
+    "@spelldex/shared": "workspace:*",
+    "@techstark/opencv-js": "5.0.0-release.1",
+    "comlink": "4.4.2",
+    "tesseract.js": "^7.0.0"
+  },
+  "devDependencies": {
+    "@tesseract.js-data/eng": "^1.0.0",
+    "sharp": "^0.35.5"
+  }
 }

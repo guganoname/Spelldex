@@ -66,7 +66,8 @@ export default defineConfig({
             options: { cacheName: 'scryfall-symbols', expiration: { maxAgeSeconds: 60 * 60 * 24 * 90 } },
           },
           {
-            urlPattern: ({ url }) => /\/(scan|engines)\//.test(url.pathname),
+            // Scanner engines: the OpenCV.js asset (fetched by the scan worker) and Tesseract files.
+            urlPattern: ({ url }) => /\/(scan|engines)\/|\/assets\/(opencv|tesseract)[^/]*$/.test(url.pathname),
             handler: 'CacheFirst',
             options: { cacheName: 'scan-engines' },
           },
