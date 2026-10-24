@@ -9,9 +9,8 @@ import { Canvas, useThree } from '@react-three/fiber';
 import { animate, useMotionValue } from 'motion/react';
 import { useDrag } from '@use-gesture/react';
 import type * as THREE from 'three';
-import { AgXToneMapping } from 'three';
-import { codexEnvironment, createCodex, lidEvents, quadToMatrix3d, type Codex, type CodexScreenQuad } from '@spelldex/device-3d';
-import { color as colorTokens, motion as motionTokens } from '@spelldex/design/tokens';
+import { createCodex, lidEvents, tokensFromDesign, quadToMatrix3d, type Codex, type CodexScreenQuad } from '@spelldex/device-3d';
+import { motion as motionTokens, tokens as designTokens } from '@spelldex/design/tokens';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
 import { ENTRY_TAB_LABELS, tabForGem, type DeviceButton, type GemIndex } from '@spelldex/shared/contracts';
 import { emitButton, useDeviceStore } from '../state/device.ts';
@@ -31,17 +30,13 @@ function Scene({ codex, progress, onFrame }: {
   const { camera, size, invalidate, gl, scene } = useThree();
   const cam = camera as THREE.PerspectiveCamera;
 
-  // Metal needs an environment to reflect; without it brass renders almost black.
+  // Reflections, AgX tone mapping and the warm key light from the top left the materials are tuned
+  // for. Without the reflections brass renders almost black.
   useEffect(() => {
-    const env = codexEnvironment(gl);
-    scene.environment = env;
-    scene.environmentIntensity = 0.7;
+    const unstage = codex.stage(scene, gl);
     invalidate();
-    return () => {
-      scene.environment = null;
-      env.dispose();
-    };
-  }, [gl, scene, invalidate]);
+    return unstage;
+  }, [codex, gl, scene, invalidate]);
 
   useEffect(() => {
     let last = performance.now();
@@ -75,8 +70,6 @@ function Scene({ codex, progress, onFrame }: {
 
   return (
     <>
-      {/* One warm light source, top left, like the CSS shell. */}
-      <directionalLight position={[-6, 12, 14]} intensity={2.2} color="#ffe7c2" />
       <primitive object={codex.group} />
     </>
   );
@@ -92,7 +85,7 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
   const topRef = useSlotRef('top');
   const bottomRef = useSlotRef('bottom');
 
-  const codex = useMemo(() => createCodex({ tokens: { gem: Object.fromEntries(Object.entries(colorTokens.mana).map(([k, v]) => [k, { color: v }])) } }), []);
+  const codex = useMemo(() => createCodex({ tokens: tokensFromDesign(designTokens) }), []);
   useEffect(() => () => codex.dispose(), [codex]);
 
   const progress = useMotionValue(open ? 1 : 0);
@@ -232,7 +225,7 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
         className={css.canvas}
         frameloop="demand"
         dpr={[1, 2]}
-        gl={{ antialias: true, powerPreference: 'high-performance', toneMapping: AgXToneMapping, toneMappingExposure: 0.92 }}
+        gl={{ antialias: true, powerPreference: 'high-performance' }}
         camera={{ fov: 30, near: 0.1, far: 100, position: [0, 0, 10] }}
       >
         <Scene codex={codex} progress={progress} onFrame={onFrame} />
