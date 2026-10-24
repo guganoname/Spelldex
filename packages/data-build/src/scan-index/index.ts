@@ -9,7 +9,7 @@
  * instead (tests, offline runs).
  */
 import { existsSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import sharp from 'sharp';
@@ -79,13 +79,42 @@ export function sourcesFromCatalog(catalogPath: string): CardSource[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchImage(url: string, tries = 4): Promise<Buffer> {
+/**
+ * Spaces CDN requests and lets one worker's 429/503 pause all of them, so a throttling CDN sees
+ * the whole build slow down instead of eight workers retrying in parallel.
+ */
+export class Throttle {
+  private next = 0;
+  private readonly gapMs: number;
+  constructor(gapMs: number) {
+    this.gapMs = gapMs;
+  }
+  async slot(): Promise<void> {
+    const at = Math.max(Date.now(), this.next);
+    this.next = at + this.gapMs;
+    if (at > Date.now()) await sleep(at - Date.now());
+  }
+  pause(ms: number): void {
+    this.next = Math.max(this.next, Date.now() + ms);
+  }
+}
+
+const RETRY_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+export async function fetchImage(url: string, throttle: Throttle, tries = 8, baseDelayMs = 2000): Promise<Buffer> {
   for (let i = 0; ; i++) {
+    await throttle.slot();
     const r = await fetch(url, { headers: { 'User-Agent': 'Spelldex/0.1 (scan index build)', Accept: 'image/*' } }).catch((e: unknown) => e as Error);
     if (!(r instanceof Error) && r.ok) return Buffer.from(await r.arrayBuffer());
     const why = r instanceof Error ? r.message : `HTTP ${r.status}`;
-    if (i + 1 >= tries || (!(r instanceof Error) && r.status === 404)) throw new Error(`${why} ${url}`);
-    await sleep(1000 * 2 ** i);
+    const retryable = r instanceof Error || RETRY_STATUS.has(r.status);
+    // A network error (DNS, refused, offline) rarely heals within seconds: give it 3 tries only.
+    if (!retryable || i + 1 >= (r instanceof Error ? Math.min(tries, 3) : tries)) throw new Error(`${why} ${url}`);
+    // Honour Retry-After (seconds) when the CDN sends it, else exponential backoff capped at 60 s.
+    const retryAfter = r instanceof Error ? NaN : Number(r.headers.get('retry-after'));
+    const delay = Number.isFinite(retryAfter) ? retryAfter * 1000 : Math.min(60_000, baseDelayMs * 2 ** i);
+    if (!(r instanceof Error) && (r.status === 429 || r.status === 503)) throttle.pause(delay);
+    await sleep(delay);
   }
 }
 
@@ -95,6 +124,11 @@ export interface HashOptions {
   concurrency?: number;
   /** Minimum gap between CDN requests, ms (politeness towards Scryfall). */
   requestGapMs?: number;
+  /** First retry delay for throttled/failed requests, doubled per try (capped at 60 s). */
+  retryBaseMs?: number;
+  /** Called with the index so far every `checkpointEvery` newly hashed faces (survives a timeout). */
+  checkpoint?: (bin: Uint8Array) => void | Promise<void>;
+  checkpointEvery?: number;
   log?: (msg: string) => void;
 }
 
@@ -110,29 +144,32 @@ export async function hashSources(sources: CardSource[], opts: HashOptions = {})
     return !prev;
   });
   opts.log?.(`scan index: ${sources.length - todo.length} reused, ${todo.length} to hash`);
-  const gap = opts.requestGapMs ?? 60;
-  let next = 0, done = 0, lastRequest = 0;
+  const throttle = new Throttle(opts.requestGapMs ?? 60);
+  const every = opts.checkpointEvery ?? 5000;
+  let next = 0, done = 0, ok = 0;
   const work = async () => {
     while (next < todo.length) {
       const s = todo[next++]!;
       try {
         let input: Buffer | string;
         if (opts.imagesDir) input = join(opts.imagesDir, `${s.scryfallId}${s.back ? '-back' : ''}.jpg`);
-        else {
-          const wait = lastRequest + gap - Date.now();
-          lastRequest = Math.max(Date.now(), lastRequest + gap);
-          if (wait > 0) await sleep(wait);
-          input = await fetchImage(scryfallImageUrl(s.scryfallId, s.back));
-        }
+        else input = await fetchImage(scryfallImageUrl(s.scryfallId, s.back), throttle, 8, opts.retryBaseMs);
         hashes.set(faceKey(s), hashCard(await loadCardRgba(input)));
+        ok++;
       } catch (e) {
         failed.push(`${faceKey(s)} ${(e as Error).message}`);
+        // Offline or blocked: stop after the first handful instead of trying every print.
+        if (ok === 0 && failed.length >= 10) next = todo.length;
       }
       if (++done % 1000 === 0) opts.log?.(`scan index: hashed ${done}/${todo.length}`);
+      if (opts.checkpoint && done % every === 0) await opts.checkpoint(encode(sources, hashes).bin);
     }
   };
   await Promise.all(Array.from({ length: opts.concurrency ?? 8 }, work));
+  return { ...encode(sources, hashes), failed };
+}
 
+function encode(sources: CardSource[], hashes: Map<string, CardHashes>) {
   const groups = new Map<string, number>();
   const entries: ScanIndexEntry[] = [];
   for (const s of sources) {
@@ -141,7 +178,7 @@ export async function hashSources(sources: CardSource[], opts: HashOptions = {})
     if (!groups.has(s.artKey)) groups.set(s.artKey, groups.size);
     entries.push({ scryfallId: s.scryfallId, hashes: h, group: groups.get(s.artKey)!, set: s.set, collectorNumber: s.collectorNumber, back: s.back });
   }
-  return { bin: encodeScanIndex(entries), entries, failed };
+  return { bin: encodeScanIndex(entries), entries };
 }
 
 async function loadPrevious(path: string | undefined): Promise<Map<string, CardHashes> | undefined> {
@@ -156,10 +193,15 @@ export async function buildScanIndex(input: ScanIndexInput): Promise<ArtifactFil
   const log = (m: string) => console.log(m);
   const sources = sourcesFromCatalog(input.catalogPath);
   if (!sources.length) return null;
+  // Progress is checkpointed to scan-index.partial.bin; pass it as previousIndexPath next time
+  // (e.g. via the CI cache) and an interrupted first full build resumes instead of starting over.
+  const partial = join(input.outDir, 'scan-index.partial.bin');
+  const previous = await loadPrevious(input.previousIndexPath);
   const res = await hashSources(sources, {
-    previous: await loadPrevious(input.previousIndexPath),
+    previous,
     imagesDir: process.env.SCAN_INDEX_IMAGES,
     log,
+    checkpoint: (bin) => writeFile(partial, bin),
   });
   if (res.failed.length) log(`scan index: ${res.failed.length} faces failed, e.g. ${res.failed.slice(0, 3).join('; ')}`);
   // Nothing reachable at all (offline fixture build, CDN blocked): skip the artifact, the app
@@ -168,6 +210,10 @@ export async function buildScanIndex(input: ScanIndexInput): Promise<ArtifactFil
     log('scan index: skipped, no card image could be loaded (offline?)');
     return null;
   }
-  if (res.entries.length < sources.length * 0.9) throw new Error(`scan index: only ${res.entries.length}/${sources.length} faces hashed`);
+  if (res.entries.length < sources.length * 0.9) {
+    await writeFile(partial, res.bin);
+    throw new Error(`scan index: only ${res.entries.length}/${sources.length} faces hashed; progress kept in ${partial}`);
+  }
+  await rm(partial, { force: true });
   return writeArtifact(input.outDir, 'scan-index.bin', res.bin);
 }

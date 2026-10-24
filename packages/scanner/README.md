@@ -1,0 +1,47 @@
+# @spelldex/scanner
+
+Erkennt Magic-Karten über die Kamera, offline und ohne KI-Modell zur Laufzeit.
+
+## Ablauf pro Kamerabild (im Worker)
+
+1. **Umriss finden** (OpenCV.js): Graustufen, Canny-Kanten und Otsu-Schwelle, Vierecke mit Kartenformat 63:88, bewertet nach Fläche und Kantenunterstützung auf allen vier Seiten. Danach Subpixel-Verfeinerung: Geraden durch die stärksten Helligkeitssprünge, Schnittpunkte als Ecken.
+2. **Hypothesen**: Erkennt der Detektor statt des Kartenrands den inneren Rahmen oder die Bildbox, werden die daraus folgenden Außenränder mitgeprüft; ohne Umriss der Führungsrahmen in der Bildmitte. Es gewinnt der beste Treffer, bei einem sicheren Treffer bricht die Suche früh ab.
+3. **Entzerren** auf 488×680 Pixel, das Format der Scryfall-Bilder.
+4. **Fingerabdruck** (`@spelldex/shared/scan`): 256-Bit-pHash über die Illustration, 64-Bit-pHash über die ganze Karte, beide nach Grauwelt-Weißabgleich. Beide Drehrichtungen (Karte steht auf dem Kopf).
+5. **Suche**: Hamming-Abstand gegen alle Einträge von `scan-index.bin` (Brute Force).
+6. **Entscheiden**: Treffer, wenn der Abstand unter der Schwelle liegt und deutlich vor der nächsten *anderen* Illustration. Reprints (gleiche Illustration) gehen an den nächstliegenden Druck, die übrigen stehen in `otherPrints`; optional liest Tesseract.js die Sammlernummer.
+7. **Stabilisieren**: 3 gleiche Ergebnisse in Folge ergeben genau einen `hit`.
+
+## Benutzen
+
+```ts
+import { startCameraScan } from '@spelldex/scanner/camera';
+import { initialScanFeedback, scanFeedback } from '@spelldex/scanner';
+
+const scan = await startCameraScan({ video, indexUrl, onResult: (r) => { /* ScanFrameResult */ } });
+scan.setTorch(true); scan.reset(); scan.stop();
+```
+
+In der App: `apps/web/src/screens/ScanLens.tsx`. Manuelle Testseite für echte Handys: `demo/` (mit Vite bauen, `?index=<URL>`).
+
+## Index bauen
+
+`packages/data-build/src/scan-index` lädt für jede Kartenseite des Katalogs das Scryfall-Bild (`cards.scryfall.io/normal`), hasht es und verwirft es. Hashes aus dem vorigen Index werden übernommen; Fortschritt landet alle 5000 Bilder in `scan-index.partial.bin`. Bei 429/503 pausieren alle Downloads (Retry-After oder bis 60 s Backoff). Offline wird der Schritt übersprungen.
+
+## Messung (synthetisch, 2026-10-24)
+
+Keine echten Karten: Der Lauf nutzt generierte Karten mit gemeinsamem Rahmenlayout und einen Kamera-Simulator (Hintergründe mit Störobjekten, Drehung bis 30°, Perspektive, Lichtverlauf, Farbstich, Gamma, Spiegelung, Hüllen, Unschärfe, Bewegungsunschärfe, Rauschen, JPEG). Index: 3.455 Drucke plus Zufalls-Hashes auf 100.455 Einträge (7 MB). 1.000 Einzelbilder, davon 10 % Karten außerhalb des Index. `node --experimental-strip-types bench/run.ts --cards 3000 --photos 1000 --distractors 97000`
+
+| | richtige Karte | davon anderer Druck angeboten | falsche Karte | verpasst |
+|---|---|---|---|---|
+| alle | 89,0 % | 8,2 % | 0,0 % | 10,9 % |
+| leicht | 93,0 % | 8,4 % | 0,0 % | 7,0 % |
+| mittel | 90,6 % | 7,9 % | 0,0 % | 9,4 % |
+| schwer | 77,8 % | 8,2 % | 0,0 % | 21,7 % |
+| in Hülle | 77,2 % | 7,9 % | 0,0 % | 22,8 % |
+
+Unbekannte Karten: 99 % korrekt abgelehnt (1 Fehlalarm in 105 Einzelbildern; der 3-Bild-Filter senkt das weiter). Reprints, die sich nur in der Sammlernummer unterscheiden, landen beim falschen Druck in etwa der Hälfte der Fälle, der richtige steht dann in `otherPrints`; die OCR half bei den winzigen synthetischen Schriftzügen nicht.
+
+Zeit pro Bild (Node, ein Kern eines Cloud-Servers): Median 120 ms, 95 % unter 404 ms; die Indexsuche über 100k Einträge 8 ms. Auf Handys ist mit dem 2- bis 4-fachen zu rechnen; die Bildpumpe wartet auf den Worker und drosselt sich selbst. Im echten Browser (Chromium, simulierte Kamera, kleiner Index) kam der Treffer nach 0,9 s bei 58 ms pro Bild.
+
+Ein verpasstes Einzelbild ist im Betrieb meist harmlos, weil 8 Bilder pro Sekunde kommen. Die Schwellen in `DEFAULT_OPTIONS` sind an synthetischen Daten eingestellt und werden mit echten Karten nachgezogen.
