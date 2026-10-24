@@ -1,0 +1,1 @@
+Unveränderte MTGJSON-Set-Dateien (ISD, DSK; Stand 2026-10-24, MTGJSON 5.3.0, MIT-Lizenz) mit echten Scryfall-IDs für Tests. Nicht bearbeiten; zum Aktualisieren neu von https://mtgjson.com/api/v5/<SET>.json laden.
