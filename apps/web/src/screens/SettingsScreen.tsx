@@ -1,4 +1,4 @@
-import { feedback, hapticTarget } from '@spelldex/design/feedback';
+import { feedback, hapticTarget, isIOS } from '@spelldex/design/feedback';
 import { TopScreen, BottomScreen } from '../device/slots.tsx';
 import { useCatalogReady } from '../data/hooks.ts';
 import { useDeviceStore } from '../state/device.ts';
@@ -40,6 +40,10 @@ export function SettingsScreen() {
             <span>Lautstärke</span>
             <input type="range" min={0} max={1} step={0.05} value={prefs.volume} onChange={(e) => setPrefs({ volume: Number(e.target.value) })} />
           </label>
+          <Toggle label="Klänge trotz Lautlos-Schalter" value={prefs.audioSession === 'playback'} onChange={(v) => setPrefs({ audioSession: v ? 'playback' : 'ambient' })} />
+          {isIOS && (
+            <Toggle label="Haptik-Muster (iPhone)" value={prefs.iosHaptics === 'hybrid'} onChange={(v) => setPrefs({ iosHaptics: v ? 'hybrid' : 'tap' })} />
+          )}
           <Toggle label="Kartentexte auf Deutsch" value={prefs.cardLanguage === 'de'} onChange={(de) => setPrefs({ cardLanguage: de ? 'de' : 'en' })} />
           <Toggle label="Weniger Bewegung" value={prefs.reducedMotion ?? false} onChange={(v) => setPrefs({ reducedMotion: v })} />
           <Toggle label="3D-Gerät" value={prefs.shell !== '2d'} onChange={(v) => setPrefs({ shell: v ? null : '2d' })} />
