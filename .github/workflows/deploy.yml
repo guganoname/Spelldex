@@ -1,0 +1,78 @@
+name: Deploy
+on:
+  schedule:
+    - cron: '17 4 * * *' # nach dem nächtlichen MTGJSON-Update
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Tagesschlüssel
+        id: day
+        run: echo "d=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      # Quellen (~1,1 GB entpackt) einmal pro Tag laden; Wiederholungen am selben Tag treffen den Cache.
+      - name: Quelldaten
+        id: src
+        uses: actions/cache@v4
+        with:
+          path: sources
+          key: sources-${{ steps.day.outputs.d }}
+      - name: Quelldaten laden
+        if: steps.src.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p sources
+          curl -fsSL --retry 4 -o sources/AllPrintings.json.gz https://mtgjson.com/api/v5/AllPrintings.json.gz
+          curl -fsSL --retry 4 -o sources/AllPrices.json.gz https://mtgjson.com/api/v5/AllPrices.json.gz
+          curl -fsSL --retry 4 --compressed -o sources/variants.json https://json.commanderspellbook.com/variants.json
+
+      - name: Daten bauen
+        env:
+          NODE_OPTIONS: --max-old-space-size=5500
+        run: >
+          pnpm data:build
+          --mtgjson sources/AllPrintings.json.gz
+          --prices sources/AllPrices.json.gz
+          --spellbook sources/variants.json
+          --out apps/web/public/data
+
+      - name: App bauen
+        env:
+          VITE_BASE: /spelldex/
+        run: pnpm build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
