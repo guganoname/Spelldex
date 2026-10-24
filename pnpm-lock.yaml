@@ -135,8 +135,15 @@ importers:
 
   packages/device-3d:
     dependencies:
-      three:
+      '@spelldex/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      '@types/three':
         specifier: ^0.186.0
+        version: 0.186.0
+      three:
+        specifier: ^0.186.1
         version: 0.186.1
 
   packages/lore: {}
