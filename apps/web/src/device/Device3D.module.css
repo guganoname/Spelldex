@@ -1,0 +1,27 @@
+.stage {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(120% 80% at 30% 10%, #2a2230, #0b0a0d 70%);
+  touch-action: none;
+  overflow: hidden;
+}
+.canvas { position: absolute !important; inset: 0; }
+.screen {
+  position: absolute;
+  transform-origin: 0 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  color: var(--sd-screen-ink);
+  font-family: var(--sd-font-ui);
+  border-radius: var(--sd-radius-screen);
+  visibility: hidden;
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

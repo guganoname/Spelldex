@@ -73,4 +73,4 @@
 .table td { padding: 4px 0; border-bottom: 1px solid rgb(233 217 168 / 0.08); }
 .table td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .badge { font-size: 10px; padding: 2px 6px; border-radius: 999px; border: 1px solid currentColor; color: var(--sd-screen-ink-muted); }
-.link { color: var(--sd-rune-glow); }
+.link { color: var(--sd-rune-glow); text-decoration: none; }
