@@ -291,6 +291,13 @@ export function search(db: Db, q: SearchQuery): SearchResult {
   return { total, items: rows.map(toSummary) };
 }
 
+/** Builds the full-text index if the catalog ships without it. Returns true if it had to build. */
+export function ensureFts(db: Db, build: string): boolean {
+  if (db.get<{ value: string }>(`SELECT value FROM meta WHERE key = 'fts'`)?.value === 'ready') return false;
+  db.transaction(() => db.exec(build));
+  return true;
+}
+
 export function catalogCounts(db: Db): { printings: number; cards: number; version: string | null } {
   return {
     printings: db.get<{ n: number }>('SELECT COUNT(*) AS n FROM printing')?.n ?? 0,

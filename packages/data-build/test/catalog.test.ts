@@ -31,6 +31,7 @@ beforeAll(async () => {
     score: DEFAULT_SCORE,
     combos: new Map([[ 'x', [] ]]),
     version: 'test',
+    buildFts: true,
   });
   expect(stats.printings).toBe(9);
   db = nodeDb(path, true);

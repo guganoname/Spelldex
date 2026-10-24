@@ -2,7 +2,7 @@
 import * as Comlink from 'comlink';
 import type { CatalogApi, CollectionApi, DataWorkerApi } from '@spelldex/shared/contracts';
 
-export const MANIFEST_URL: string = import.meta.env.VITE_DATA_MANIFEST ?? '/data/manifest.json';
+export const MANIFEST_URL: string = import.meta.env.VITE_DATA_MANIFEST ?? `${import.meta.env.BASE_URL}data/manifest.json`;
 
 interface DataHandle {
   catalog: Comlink.Remote<CatalogApi>;

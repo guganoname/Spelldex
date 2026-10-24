@@ -59,7 +59,7 @@ async function sync(manifestUrl: string, onProgress?: (s: CatalogStatus) => void
     const manifest = await fetchManifest(manifestUrl);
     if (status.version === manifest.version && catalog) return status;
     const name = await installCatalog(env, manifestUrl, manifest, report);
-    const next = openDb(env, name, 'r');
+    const next = openDb(env, name);
     const old = catalog;
     catalog = next;
     old?.close();

@@ -100,10 +100,18 @@ CREATE VIRTUAL TABLE oracle_fts USING fts5(
 );
 `;
 
-/** Run after all oracle rows are inserted. */
+/**
+ * Run after all oracle rows are inserted. The full-text index is NOT built here: it is about a
+ * third of the file, so the shipped catalog leaves it empty and the device builds it once after
+ * install (ensureFts). Pass buildFts for builds that are queried directly (tests, tools).
+ */
 export const CATALOG_FINALIZE = /* sql */ `
-INSERT INTO oracle_fts(oracle_fts) VALUES ('rebuild');
 UPDATE sets SET printing_count = (SELECT COUNT(*) FROM printing p WHERE p.set_code = sets.code);
-INSERT INTO oracle_fts(oracle_fts) VALUES ('optimize');
 ANALYZE;
+`;
+
+export const FTS_BUILD = /* sql */ `
+INSERT INTO oracle_fts(oracle_fts) VALUES ('rebuild');
+INSERT INTO oracle_fts(oracle_fts) VALUES ('optimize');
+INSERT OR REPLACE INTO meta (key, value) VALUES ('fts', 'ready');
 `;
