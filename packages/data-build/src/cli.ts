@@ -35,6 +35,8 @@ const { values: args } = parseArgs({
     out: { type: 'string', default: join(repo, 'dist/data') },
     version: { type: 'string' },
     'scan-index': { type: 'boolean', default: true },
+    /** Previous scan-index.bin: unchanged prints reuse their hashes, only new ones are downloaded. */
+    'scan-previous': { type: 'string' },
   },
 });
 
@@ -107,7 +109,7 @@ async function main() {
   }
 
   if (args['scan-index']) {
-    const idx = await buildScanIndex({ catalogPath: dbPath, outDir: out });
+    const idx = await buildScanIndex({ catalogPath: dbPath, outDir: out, previousIndexPath: args['scan-previous'] });
     if (idx) manifest.artifacts.scanIndex = idx;
     log(`scan index: ${idx ? `${idx.bytes} bytes` : 'skipped'}`);
   }
