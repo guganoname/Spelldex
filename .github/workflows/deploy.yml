@@ -3,6 +3,11 @@ on:
   schedule:
     - cron: '17 4 * * *' # nach dem nächtlichen MTGJSON-Update
   workflow_dispatch:
+    inputs:
+      scan_index:
+        description: Bild-Index für den Scanner bauen (erster Lauf ca. 2 h)
+        type: boolean
+        default: true
   push:
     branches: [main]
 
@@ -63,15 +68,19 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=5500
         run: |
+          # pnpm runs the CLI inside packages/data-build, so every path must be absolute.
+          ws="$GITHUB_WORKSPACE"
           # A finished index beats a checkpoint from an aborted first run.
-          prev=scan-cache/scan-index.bin
-          [ -f "$prev" ] || prev=scan-cache/scan-index.partial.bin
+          prev="$ws/scan-cache/scan-index.bin"
+          [ -f "$prev" ] || prev="$ws/scan-cache/scan-index.partial.bin"
+          scan="--scan-previous $prev"
+          [ "${{ inputs.scan_index }}" = "false" ] && scan="--no-scan-index"
           pnpm data:build \
-            --mtgjson sources/AllPrintings.json.gz \
-            --prices sources/AllPrices.json.gz \
-            --spellbook sources/variants.json \
-            --out apps/web/public/data \
-            --scan-previous "$prev"
+            --mtgjson "$ws/sources/AllPrintings.json.gz" \
+            --prices "$ws/sources/AllPrices.json.gz" \
+            --spellbook "$ws/sources/variants.json" \
+            --out "$ws/apps/web/public/data" \
+            $scan
 
       # Runs after failures too: an aborted run keeps its hashing progress for the next one.
       - name: Scan-Index merken
