@@ -26,6 +26,8 @@ const here = fileURLToPath(new URL('.', import.meta.url));
 const repo = resolve(here, '../../..');
 
 const { values: args } = parseArgs({
+  // --no-scan-index switches the boolean off.
+  allowNegative: true,
   options: {
     mtgjson: { type: 'string' },
     prices: { type: 'string' },
