@@ -250,9 +250,7 @@ export function detectCard(cv: CV, src: any): Corners | null {
  * of a Scryfall image, so camera and index line up to about a pixel.
  */
 export function refineQuad(cv: CV, src: any, quad: Corners): Corners {
-  const gray = new cv.Mat();
-  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-  cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
+  const gray = refineGray(cv, src);
   const W = gray.cols, H = gray.rows, g: Uint8Array = gray.data;
   const at = (x: number, y: number) => {
     // bilinear sample
@@ -283,7 +281,7 @@ export function refineQuad(cv: CV, src: any, quad: Corners): Corners {
       }
       if (bestG >= 12) pts.push([bx + nx * bestOff, by + ny * bestOff]);
     }
-    if (pts.length < 8) { gray.delete(); return quad; }
+    if (pts.length < 8) return quad;
     // Fit, drop the worst third, fit again.
     let fit = fitLine(pts);
     const resid = pts.map((p) => Math.abs((p[0] - fit.px) * -fit.dy + (p[1] - fit.py) * fit.dx));
@@ -291,7 +289,6 @@ export function refineQuad(cv: CV, src: any, quad: Corners): Corners {
     fit = fitLine(pts.filter((_, i) => resid[i]! <= cut));
     lines.push(fit);
   }
-  gray.delete();
   const out: Pt[] = [];
   for (let s = 0; s < 4; s++) {
     const l1 = lines[(s + 3) % 4]!, l2 = lines[s]!; // corner s joins side s-1 and side s
@@ -303,6 +300,19 @@ export function refineQuad(cv: CV, src: any, quad: Corners): Corners {
     out.push(p);
   }
   return out as Corners;
+}
+
+// Blurred grey frame for refineQuad, shared by all hypotheses of one frame. The
+// previous frame's copy is freed when the next frame comes in.
+let refineCache: { src: any; gray: any } | null = null;
+function refineGray(cv: CV, src: any): any {
+  if (refineCache && refineCache.src === src) return refineCache.gray;
+  refineCache?.gray.delete();
+  const gray = new cv.Mat();
+  cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+  cv.GaussianBlur(gray, gray, new cv.Size(3, 3), 0);
+  refineCache = { src, gray };
+  return gray;
 }
 
 function fitLine(pts: Pt[]): { px: number; py: number; dx: number; dy: number } {
@@ -324,14 +334,15 @@ export function guideQuad(width: number, height: number, fill = 0.8): Corners {
 }
 
 /** Perspective-correct the quad into a CARD_W x CARD_H RGBA image (the Scryfall "normal" size). */
-export function warpCard(cv: CV, src: any, quad: Corners, w = CARD_W, h = CARD_H): Uint8ClampedArray {
+export function warpCard(cv: CV, src: any, quad: Corners, w = CARD_W, h = CARD_H, smooth = false): Uint8ClampedArray {
   const from = cv.matFromArray(4, 1, cv.CV_32FC2, quad.flat());
   const to = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, w, 0, w, h, 0, h]);
   const m = cv.getPerspectiveTransform(from, to);
   const out = new cv.Mat();
-  // INTER_AREA is not supported by warpPerspective; when the card is much
-  // larger than 488x680 in the frame, pre-blur to avoid aliasing.
-  cv.warpPerspective(src, out, m, new cv.Size(w, h), cv.INTER_LINEAR, cv.BORDER_REPLICATE);
+  // Nearest neighbour for hashing: bilinear is ~6x slower in OpenCV.js (17 vs 3 ms)
+  // and the hashes box-filter the image down by 5-14x anyway, so accuracy is the same.
+  // `smooth` (bilinear) is for OCR, which reads small print at 3x.
+  cv.warpPerspective(src, out, m, new cv.Size(w, h), smooth ? cv.INTER_LINEAR : cv.INTER_NEAREST, cv.BORDER_REPLICATE);
   const data = new Uint8ClampedArray(out.data);
   from.delete(); to.delete(); m.delete(); out.delete();
   return data;
@@ -399,5 +410,5 @@ export function warpCardRegion(
   region: { x: number; y: number; w: number; h: number },
   outW: number, outH: number,
 ): Uint8ClampedArray {
-  return warpCard(cv, src, cardRectToQuad(cv, quad, region), outW, outH);
+  return warpCard(cv, src, cardRectToQuad(cv, quad, region), outW, outH, true);
 }
