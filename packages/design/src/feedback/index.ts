@@ -1,26 +1,94 @@
-// PLACEHOLDER with the agreed signatures; replaced by the design thread's implementation.
-export type FeedbackEvent =
-  | 'press' | 'back' | 'tab' | 'toggle' | 'swipe' | 'latch-release' | 'lid-detent' | 'lid-settle' | 'open' | 'close'
-  | 'scan-open' | 'scan-lock' | 'scan-lost' | 'scan-hit' | 'scan-ambiguous' | 'scan-pick' | 'scan-hint-light'
-  | 'torch-toggle' | 'scan-close' | 'collect' | 'set-complete' | 'error';
-export interface FeedbackOptions {
-  gem?: 'W' | 'U' | 'B' | 'R' | 'G' | 'M' | 'C';
-  rarity?: 'common' | 'uncommon' | 'rare' | 'mythic';
-}
-export interface FeedbackPrefs { sound: boolean; haptics: boolean; volume: number }
+/**
+ * Die zentrale Feedback-Schicht. Komponenten rufen nur feedback('press') usw.
+ * Ohne window/AudioContext (SSR, Vitest mit jsdom) ist alles ein No-op.
+ */
+import { EVENTS, type FeedbackEvent, type FeedbackOptions } from "./events";
+import { canVibrate, isIOS, setHapticsEnabled, vibrate } from "./haptics";
+import { SoundEngine, type AudioSessionMode } from "./sound";
 
-let prefs: FeedbackPrefs = { sound: true, haptics: true, volume: 0.8 };
-const VIBRATE: Partial<Record<FeedbackEvent, number | number[]>> = {
-  press: 10, tab: 10, toggle: 10, collect: 20, 'scan-hit': [15, 40, 25], error: [30, 30, 30],
-};
+export type { FeedbackEvent, FeedbackOptions, GemColor, Rarity, EventSpec } from "./events";
+export { EVENTS, FEEDBACK_EVENTS } from "./events";
+export { hapticTarget, isIOS, canVibrate } from "./haptics";
+export type { AudioSessionMode } from "./sound";
 
-export function feedback(event: FeedbackEvent, _opts?: FeedbackOptions): void {
-  if (typeof navigator === 'undefined' || !prefs.haptics) return;
-  const v = VIBRATE[event];
-  if (v != null && 'vibrate' in navigator) navigator.vibrate(v);
+export interface FeedbackPrefs {
+  sound: boolean;
+  haptics: boolean;
+  /** 0..1 */
+  volume: number;
+  /** 'ambient' respektiert den Lautlos-Schalter des iPhones */
+  audioSession: AudioSessionMode;
 }
-export async function unlockFeedback(): Promise<void> {}
+
+const engine = new SoundEngine();
+const prefs: FeedbackPrefs = { sound: true, haptics: true, volume: 0.8, audioSession: "ambient" };
+const lastFired = new Map<FeedbackEvent, number>();
+type Listener = (event: FeedbackEvent, opts: FeedbackOptions) => void;
+const listeners = new Set<Listener>();
+
+const hasRuntime = () => typeof window !== "undefined";
+
+/** Beim ersten echten Tap aufrufen (z. B. auf das Siegel). Entsperrt Audio auf iOS. */
+export async function unlockFeedback(): Promise<void> {
+  if (!hasRuntime()) return;
+  await engine.unlock(prefs.audioSession);
+}
+
+export function feedbackReady(): boolean {
+  return engine.ready;
+}
+
+export function feedback(event: FeedbackEvent, opts: FeedbackOptions = {}): void {
+  if (!hasRuntime()) return;
+  const spec = EVENTS[event];
+  if (!spec) return;
+  const now = performance.now();
+  if (spec.debounceMs && now - (lastFired.get(event) ?? -Infinity) < spec.debounceMs) return;
+  lastFired.set(event, now);
+
+  if (prefs.sound) {
+    const id = spec.sound(opts);
+    if (id) engine.play(id, opts.intensity ?? 1);
+  }
+  if (prefs.haptics && !isIOS && spec.android != null) {
+    const p = typeof spec.android === "function" ? spec.android(opts) : spec.android;
+    vibrate(p);
+  }
+  // iOS: der Tick kam bereits vom Element (hapticTarget). Ereignisse ohne Tap bleiben ohne Haptik.
+  for (const l of listeners) l(event, opts);
+}
+
+/** Für visuelle Reaktionen (Glühen, Blitz), die an dieselben Ereignisse gekoppelt sind. */
+export function onFeedback(fn: Listener): () => void {
+  listeners.add(fn);
+  return () => listeners.delete(fn);
+}
+
+export function getFeedbackPrefs(): Readonly<FeedbackPrefs> {
+  return { ...prefs };
+}
+
 export function setFeedbackPrefs(p: Partial<FeedbackPrefs>): void {
-  prefs = { ...prefs, ...p };
+  Object.assign(prefs, p);
+  engine.enabled = prefs.sound;
+  engine.setVolume(prefs.volume);
+  if (p.haptics !== undefined) setHapticsEnabled(prefs.haptics);
+  if (p.audioSession && hasRuntime()) engine.setSessionMode(prefs.audioSession);
 }
-export function hapticTarget(_el: HTMLElement | null): void {}
+
+/** Zugriff für Werkzeuge (Demo, Tests): rohe Samples eines Klangs. */
+export function renderSound(id: string): Float32Array[] {
+  return engine.render(id);
+}
+
+/** Klang direkt abspielen, ohne Haptik (Sound-Board, Vorschau). */
+export function playSound(id: string, gain = 1): void {
+  engine.play(id, gain);
+}
+
+export const capabilities = () => ({
+  ios: isIOS,
+  vibrate: canVibrate,
+  audio: hasRuntime() && ("AudioContext" in window || "webkitAudioContext" in window),
+  audioSession: hasRuntime() && "audioSession" in navigator,
+});

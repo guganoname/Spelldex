@@ -1,0 +1,256 @@
+/*
+ * Spelldex skeuomorphe Basiskomponenten. Setzt tokens.css voraus.
+ * Regeln: Licht immer oben links. Material nur an Gehäuse und Bedienelementen,
+ * ruhige Flächen dort, wo gelesen wird. Drückbares hat drei Zustände:
+ * erhaben, gedrückt (2px tiefer, Innenschatten), gesperrt (matt).
+ * Verhalten/Barrierefreiheit kommen von Radix oder nativen Elementen; hier nur Aussehen.
+ */
+
+:root {
+  --sd-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --sd-brass-face: linear-gradient(145deg, var(--sd-brass-light) 0%, var(--sd-brass) 38%, #8f6f40 70%, var(--sd-brass-dark) 100%);
+  --sd-leather-face:
+    radial-gradient(ellipse 11px 7px at 50% 100%, rgba(0, 0, 0, 0.42) 60%, transparent 72%) 0 0 / 18px 11px,
+    radial-gradient(ellipse 11px 7px at 50% 100%, rgba(0, 0, 0, 0.42) 60%, transparent 72%) 9px 5.5px / 18px 11px,
+    radial-gradient(ellipse 9px 5px at 50% 30%, rgba(255, 210, 160, 0.06), transparent 70%) 0 0 / 18px 11px,
+    radial-gradient(ellipse 9px 5px at 50% 30%, rgba(255, 210, 160, 0.06), transparent 70%) 9px 5.5px / 18px 11px,
+    linear-gradient(160deg, var(--sd-leather-light), var(--sd-leather) 55%, #160d0a);
+  --sd-identity: var(--sd-accent-identity);
+}
+
+/* iOS: :active nur mit Touch-Listener; Haptik-Overlays bei abgeschalteter Haptik ausblenden */
+.sd-haptics-off [data-haptic-trigger] { display: none !important; }
+
+/* ---------- Bildschirm: Obsidianglas im Messingrahmen ---------- */
+.sd-bezel {
+  padding: var(--sd-space-2);
+  border-radius: var(--sd-radius-lg);
+  background: var(--sd-grain), var(--sd-brass-face);
+  box-shadow: var(--sd-shadow-raised);
+}
+.sd-screen {
+  position: relative;
+  border-radius: calc(var(--sd-radius-lg) - 6px);
+  background:
+    radial-gradient(120% 70% at 20% 0%, color-mix(in srgb, var(--sd-identity) 16%, transparent), transparent 60%),
+    radial-gradient(80% 60% at 100% 100%, color-mix(in srgb, var(--sd-identity) 8%, transparent), transparent 70%),
+    var(--sd-screen-surface);
+  color: var(--sd-screen-ink);
+  box-shadow: var(--sd-shadow-inset-screen);
+  overflow: hidden;
+  transition: background-color 400ms;
+}
+/* Glanz: diagonale Spiegelung von oben links */
+.sd-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255, 245, 225, 0.07) 0%, rgba(255, 245, 225, 0.02) 30%, transparent 31%);
+  border-radius: inherit;
+}
+
+/* ---------- Gravur-Taste ---------- */
+.sd-key {
+  --sd-key-depth: 0px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sd-space-2);
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 var(--sd-space-4);
+  border: 0;
+  border-radius: var(--sd-radius-md);
+  background: var(--sd-grain), var(--sd-brass-face);
+  color: var(--sd-leather);
+  font: 600 var(--sd-size-sm) / 1 var(--sd-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: var(--sd-shadow-engrave);
+  box-shadow: var(--sd-shadow-raised);
+  transform: translateY(var(--sd-key-depth));
+  transition: transform var(--sd-spring-key-duration) var(--sd-spring-key), box-shadow 80ms;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+.sd-key:active,
+.sd-key[data-pressed] {
+  --sd-key-depth: 2px;
+  box-shadow: var(--sd-shadow-pressed);
+  transition-duration: 60ms;
+}
+.sd-key:disabled,
+.sd-key[aria-disabled="true"] {
+  filter: saturate(0.3) brightness(0.7);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4);
+  cursor: default;
+}
+.sd-key:focus-visible { outline: 2px solid var(--sd-ink-gold); outline-offset: 3px; }
+.sd-key--round { border-radius: var(--sd-radius-pill); padding: 0; aspect-ratio: 1; }
+
+/* ---------- Edelstein-Tab ---------- */
+.sd-gem {
+  --gem: var(--sd-mana-c);
+  position: relative;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  padding: 6px 2px 4px;
+  border: 0;
+  background: none;
+  color: var(--sd-screen-ink-muted);
+  font: 500 var(--sd-size-xs) / 1 var(--sd-font-ui);
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.sd-gem__stone {
+  width: 26px;
+  height: 30px;
+  clip-path: polygon(50% 0, 100% 30%, 82% 100%, 18% 100%, 0 30%);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.55) 0 18%, transparent 19%),
+    linear-gradient(225deg, rgba(0, 0, 0, 0.35) 0 40%, transparent 41%),
+    linear-gradient(180deg, color-mix(in srgb, var(--gem) 85%, white), var(--gem) 45%, color-mix(in srgb, var(--gem) 55%, black));
+  filter: brightness(0.62) saturate(0.7);
+  transform: scale(0.94);
+  transition: filter var(--sd-spring-gem-duration) var(--sd-spring-gem), transform var(--sd-spring-gem-duration) var(--sd-spring-gem);
+}
+.sd-gem[aria-selected="true"] { color: var(--sd-screen-ink); }
+.sd-gem[aria-selected="true"] .sd-gem__stone {
+  filter: brightness(1.1) saturate(1.1) drop-shadow(0 0 8px var(--gem));
+  transform: scale(1.06);
+}
+.sd-gem:active .sd-gem__stone { transform: scale(0.9); transition-duration: 60ms; }
+.sd-gem:focus-visible { outline: 2px solid var(--sd-ink-gold); outline-offset: 2px; border-radius: var(--sd-radius-sm); }
+.sd-gem[data-gem="W"] { --gem: var(--sd-mana-w); }
+.sd-gem[data-gem="U"] { --gem: var(--sd-mana-u); }
+.sd-gem[data-gem="B"] { --gem: var(--sd-mana-b); }
+.sd-gem[data-gem="R"] { --gem: var(--sd-mana-r); }
+.sd-gem[data-gem="G"] { --gem: var(--sd-mana-g); }
+.sd-gem[data-gem="M"] { --gem: var(--sd-mana-m); }
+
+/* ---------- Messing-Schalter (button role="switch") ---------- */
+.sd-toggle {
+  position: relative;
+  width: 58px;
+  height: 30px;
+  flex: none;
+  border: 0;
+  border-radius: var(--sd-radius-pill);
+  background: linear-gradient(180deg, #0a0809, #231a16);
+  box-shadow: inset 2px 3px 6px rgba(0, 0, 0, 0.9), 0 1px 0 rgba(255, 236, 190, 0.18);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.sd-toggle::before {
+  /* Rune-Spur, glimmt wenn an */
+  content: "";
+  position: absolute;
+  inset: 11px 12px;
+  border-radius: 4px;
+  background: var(--sd-rune-glow);
+  opacity: 0.08;
+  transition: opacity 300ms;
+}
+.sd-toggle::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--sd-grain), radial-gradient(circle at 35% 30%, var(--sd-brass-light), var(--sd-brass) 50%, var(--sd-brass-dark));
+  box-shadow: var(--sd-shadow-raised);
+  transition: transform var(--sd-spring-key-duration) var(--sd-spring-key);
+}
+.sd-toggle[aria-checked="true"]::before { opacity: 0.7; box-shadow: 0 0 10px var(--sd-rune-glow); }
+.sd-toggle[aria-checked="true"]::after { transform: translateX(28px); }
+.sd-toggle:focus-visible { outline: 2px solid var(--sd-ink-gold); outline-offset: 3px; }
+
+/* ---------- Pergament-Panel ---------- */
+.sd-parchment {
+  position: relative;
+  padding: var(--sd-space-4) var(--sd-space-4) var(--sd-space-5);
+  border-radius: var(--sd-radius-sm);
+  color: var(--sd-panel-ink);
+  background:
+    var(--sd-grain),
+    radial-gradient(120% 90% at 50% 40%, transparent 55%, rgba(110, 70, 30, 0.35)),
+    linear-gradient(175deg, #efe3c8, var(--sd-parchment) 50%, var(--sd-parchment-dark));
+  box-shadow: 1px 2px 6px rgba(0, 0, 0, 0.6);
+  font: 400 var(--sd-size-lg) / 1.45 var(--sd-font-body);
+}
+
+/* ---------- Liste mit Ritzlinien ---------- */
+.sd-list { list-style: none; margin: 0; padding: 0; }
+.sd-list > li {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sd-space-3);
+  padding: 10px 0;
+  /* geritzte Linie: dunkle Kerbe mit hellem Grat darunter */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.75);
+  box-shadow: 0 1px 0 rgba(232, 201, 131, 0.1);
+}
+.sd-list > li:last-child { border-bottom: 0; box-shadow: none; }
+
+/* ---------- Gravur-Text, Labels ---------- */
+.sd-engraved {
+  font-family: var(--sd-font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--sd-leather);
+  text-shadow: var(--sd-shadow-engrave);
+}
+.sd-label {
+  font: 600 var(--sd-size-xs) / 1.2 var(--sd-font-ui);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--sd-screen-ink-muted);
+}
+.sd-num { font-family: var(--sd-font-ui); font-variant-numeric: tabular-nums; }
+
+/* ---------- Siegel-Abzeichen ---------- */
+.sd-seal {
+  --seal: var(--sd-mana-m);
+  display: grid;
+  place-items: center;
+  width: 64px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(0, 0, 0, 0.25) 0 4deg, transparent 4deg 12deg),
+    radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--seal) 70%, white), var(--seal) 45%, color-mix(in srgb, var(--seal) 45%, black));
+  box-shadow: var(--sd-shadow-raised), inset 0 0 0 5px rgba(0, 0, 0, 0.18);
+  color: var(--sd-leather);
+  font: 700 var(--sd-size-xs) / 1 var(--sd-font-display);
+  text-shadow: var(--sd-shadow-engrave);
+}
+.sd-seal[data-locked] { filter: grayscale(1) brightness(0.45); }
+
+/* ---------- Linsen-Klammern für den Scanner ---------- */
+.sd-bracket {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border: 0 solid var(--sd-ink-gold);
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--sd-ink-gold) 60%, transparent));
+  transition: all var(--sd-spring-key-duration) var(--sd-spring-key);
+}
+.sd-bracket[data-c="tl"] { border-width: 3px 0 0 3px; border-top-left-radius: 6px; }
+.sd-bracket[data-c="tr"] { border-width: 3px 3px 0 0; border-top-right-radius: 6px; }
+.sd-bracket[data-c="bl"] { border-width: 0 0 3px 3px; border-bottom-left-radius: 6px; }
+.sd-bracket[data-c="br"] { border-width: 0 3px 3px 0; border-bottom-right-radius: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-key, .sd-gem__stone, .sd-toggle::after, .sd-bracket { transition-duration: 1ms !important; }
+}
