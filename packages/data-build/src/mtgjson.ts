@@ -50,7 +50,7 @@ export interface MtgjsonCard {
   isOnlineOnly?: boolean;
   isFunny?: boolean;
   availability?: string[];
-  identifiers: { scryfallId?: string; scryfallOracleId?: string; mcmId?: string };
+  identifiers: { scryfallId?: string; scryfallOracleId?: string; scryfallIllustrationId?: string; mcmId?: string };
   foreignData?: MtgjsonForeign[];
 }
 

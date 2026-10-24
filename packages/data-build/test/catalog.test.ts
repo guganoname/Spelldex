@@ -71,6 +71,11 @@ describe('catalog build', () => {
     const elves = q.getCard(db, oracleOf('Llanowar Elves').scryfallId)!;
     expect(elves.tags).toContain('ramp');
   });
+
+  it('stores the illustration id that groups reprints with the same artwork', () => {
+    const rows = db.all<{ n: number; art: number }>('SELECT COUNT(*) AS n, COUNT(illustration_id) AS art FROM printing');
+    expect(rows[0]).toEqual({ n: 9, art: 9 });
+  });
 });
 
 describe('search', () => {

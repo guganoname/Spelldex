@@ -44,6 +44,7 @@
     "identifiers": {
      "scryfallId": "50cd264f-2655-5319-97ec-eec793c34184",
      "scryfallOracleId": "aaf0661e-4981-558b-a6cd-b630ef340d66",
+     "scryfallIllustrationId": "6f5a78c0-52e9-5df6-915d-601341de8f87",
      "mcmId": "124570"
     },
     "manaCost": "{1}{R}",
@@ -87,6 +88,7 @@
     "identifiers": {
      "scryfallId": "50cd264f-2655-5319-97ec-eec793c34184",
      "scryfallOracleId": "aaf0661e-4981-558b-a6cd-b630ef340d66",
+     "scryfallIllustrationId": "6f5a78c0-52e9-5df6-915d-601341de8f87",
      "mcmId": "124570"
     },
     "manaCost": "{1}{U}",
