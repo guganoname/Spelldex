@@ -32,8 +32,11 @@ const DEFAULT_PREFS: Prefs = {
 interface DeviceState {
   /** Lid target: true = open. The shell animates towards it with a spring. */
   open: boolean;
-  /** Set by the shell while animating, 0 (closed) .. 1 (open). */
+  /** Set by the shell when the lid comes to rest, 0 (closed) or 1 (open). Not per frame: every
+   * store write also persists to localStorage, which stutters the lid on phones. */
   lidProgress: number;
+  /** Reading mode: the info screen grows to (almost) the full width below the lens. */
+  reading: boolean;
   /** First real tap happened: audio and haptics unlocked. */
   unlocked: boolean;
   accent: ColorAccent;
@@ -42,6 +45,7 @@ interface DeviceState {
   prefs: Prefs;
   setOpen(open: boolean): void;
   setLidProgress(p: number): void;
+  setReading(reading: boolean): void;
   setUnlocked(): void;
   setAccent(a: ColorAccent): void;
   setActiveGem(g: GemIndex | null): void;
@@ -54,6 +58,7 @@ export const useDeviceStore = create<DeviceState>()(
     (set) => ({
       open: false,
       lidProgress: 0,
+      reading: false,
       unlocked: false,
       accent: 'colorless',
       activeGem: null,
@@ -61,6 +66,7 @@ export const useDeviceStore = create<DeviceState>()(
       prefs: DEFAULT_PREFS,
       setOpen: (open) => set({ open }),
       setLidProgress: (lidProgress) => set({ lidProgress }),
+      setReading: (reading) => set({ reading }),
       setUnlocked: () => set({ unlocked: true }),
       setAccent: (accent) => set({ accent }),
       setActiveGem: (activeGem) => set({ activeGem }),
@@ -71,10 +77,10 @@ export const useDeviceStore = create<DeviceState>()(
       name: 'spelldex-device',
       storage: createJSONStorage(() => localStorage),
       // From the second start the device opens in its last state.
-      partialize: (s) => ({ prefs: s.prefs, open: s.open }),
+      partialize: (s) => ({ prefs: s.prefs, open: s.open, reading: s.reading }),
       // Stored prefs from older versions lack newer fields; keep the defaults for those.
       merge: (stored, current) => {
-        const p = (stored ?? {}) as Partial<Pick<DeviceState, 'prefs' | 'open'>>;
+        const p = (stored ?? {}) as Partial<Pick<DeviceState, 'prefs' | 'open' | 'reading'>>;
         return { ...current, ...p, prefs: { ...current.prefs, ...p.prefs } };
       },
     },

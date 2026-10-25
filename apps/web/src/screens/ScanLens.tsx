@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
 import { initialScanFeedback, scanFeedback, type ScanFeedbackState } from '@spelldex/scanner';
-import { startCameraScan, type CameraScan } from '@spelldex/scanner/camera';
+import { CameraUnavailableError, startCameraScan, type CameraScan } from '@spelldex/scanner/camera';
 import type { ScanFrameResult, ScanMatch } from '@spelldex/shared/contracts';
 import css from './scan.module.css';
 
@@ -16,7 +16,8 @@ interface Props {
   onPick: (match: ScanMatch, via: 'hit' | 'pick') => void;
 }
 
-type Phase = 'idle' | 'starting' | 'running' | 'error';
+/** starting: waiting for the camera permission; loading: picture live, recognition still loading. */
+type Phase = 'idle' | 'starting' | 'loading' | 'running' | 'error';
 
 export function ScanLens({ indexUrl, onPick }: Props) {
   const video = useRef<HTMLVideoElement>(null);
@@ -31,23 +32,32 @@ export function ScanLens({ indexUrl, onPick }: Props) {
   const [hint, setHint] = useState(false);
   const [torch, setTorch] = useState(false);
 
-  useEffect(() => () => {
-    if (scan.current) {
-      scan.current.stop();
-      scan.current = null;
-      feedback('scan-close');
-    }
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      if (scan.current) {
+        scan.current.stop();
+        scan.current = null;
+        feedback('scan-close');
+      }
+    };
   }, []);
 
+  // No await before startCameraScan: the camera request has to stay inside the tap on iOS.
   const open = async () => {
-    unlockFeedback();
+    if (phase === 'starting' || phase === 'loading') return;
+    void unlockFeedback();
     feedback('scan-open');
     setPhase('starting');
+    setError(null);
     try {
       fb.current = initialScanFeedback(performance.now());
-      scan.current = await startCameraScan({
+      const s = await startCameraScan({
         video: video.current!,
         indexUrl,
+        onCamera: () => { if (mounted.current) setPhase('loading'); },
         onResult: (r) => {
           const step = scanFeedback(fb.current, r, performance.now());
           fb.current = step.state;
@@ -61,12 +71,18 @@ export function ScanLens({ indexUrl, onPick }: Props) {
           setFrame(r);
         },
       });
+      // Left the screen while the lens was waking up.
+      if (!mounted.current) {
+        s.stop();
+        return;
+      }
+      scan.current = s;
       setPhase('running');
     } catch (e) {
+      if (!mounted.current) return;
+      feedback('error');
       setPhase('error');
-      setError(e instanceof DOMException && e.name === 'NotAllowedError'
-        ? 'Kein Zugriff auf die Kamera. Bitte in den Browser-Einstellungen erlauben.'
-        : `Die Linse lässt sich nicht öffnen: ${(e as Error).message}`);
+      setError(cameraError(e));
     }
   };
 
@@ -90,19 +106,27 @@ export function ScanLens({ indexUrl, onPick }: Props) {
 
   return (
     <div className={css.lens}>
-      <video ref={video} className={css.video} playsInline muted />
+      <video ref={video} className={css.video} playsInline muted autoPlay />
       {v && quad && v.videoWidth > 0 && (
         // Same cover-fit as the video, so video pixels map 1:1 onto the overlay.
         <svg className={css.overlay} viewBox={`0 0 ${v.videoWidth} ${v.videoHeight}`} preserveAspectRatio="xMidYMid slice" aria-hidden>
           <polygon className={css.quad} data-locked={locked} points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />
         </svg>
       )}
-      {phase !== 'running' && (
+      {(phase === 'idle' || phase === 'starting' || phase === 'error') && (
         <div className={css.veil}>
-          {phase === 'error' ? <p role="alert">{error}</p> : <p>Halte eine Karte vor die Linse. Spelldex erkennt sie am Bild, ganz ohne Internet.</p>}
+          {phase === 'error'
+            ? <p role="alert">{error}</p>
+            : <p>Halte eine Karte vor die Linse. Spelldex erkennt sie am Bild, ganz ohne Internet.</p>}
           <button type="button" className={css.openButton} ref={hapticTarget} onClick={open} disabled={phase === 'starting'}>
-            {phase === 'starting' ? 'Linse erwacht …' : 'Linse öffnen'}
+            {phase === 'starting' ? 'Linse erwacht …' : phase === 'error' ? 'Nochmal versuchen' : 'Linse öffnen'}
           </button>
+          {phase === 'starting' && <p className={css.small}>Falls gefragt: Kamerazugriff erlauben.</p>}
+        </div>
+      )}
+      {phase === 'loading' && (
+        <div className={css.hud}>
+          <span className={css.hint}>Erkennung wird geladen …</span>
         </div>
       )}
       {phase === 'running' && (
@@ -126,4 +150,16 @@ export function ScanLens({ indexUrl, onPick }: Props) {
       )}
     </div>
   );
+}
+
+function cameraError(e: unknown): string {
+  if (e instanceof CameraUnavailableError) return e.message;
+  if (e instanceof DOMException) {
+    if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
+      return 'Kein Zugriff auf die Kamera. Auf dem iPhone: Einstellungen › Chrome (bzw. Safari) › Kamera erlauben, dann neu laden.';
+    }
+    if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') return 'Keine passende Kamera gefunden.';
+    if (e.name === 'NotReadableError' || e.name === 'AbortError') return 'Die Kamera wird gerade von einer anderen App benutzt.';
+  }
+  return `Die Linse lässt sich nicht öffnen: ${(e as Error)?.message ?? String(e)}`;
 }
