@@ -52,7 +52,8 @@ export default function Device2D({ reducedMotion }: { reducedMotion: boolean }) 
   const glassOpacity = useTransform(progress, [0.6, 1], [0, 1]);
   const lidHeight = useRef(1);
 
-  useEffect(() => progress.on('change', (v) => setLidProgress(v)), [progress, setLidProgress]);
+  // Only rest positions: a store write per frame also hits localStorage (persist) and stutters.
+  useEffect(() => progress.on('change', (v) => { if (v === 0 || v === 1) setLidProgress(v); }), [progress, setLidProgress]);
 
   useEffect(() => {
     const target = open ? 1 : 0;

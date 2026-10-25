@@ -4,7 +4,7 @@
  * the open pose, moved with matrix3d while the lid swings, plain rectangles at rest (sharp text).
  * Springs, gestures, picking and feedback live here; the codex only maps t to a pose.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
 import { animate, useMotionValue } from 'motion/react';
 import { useDrag } from '@use-gesture/react';
@@ -19,11 +19,17 @@ import css from './Device3D.module.css';
 
 /** Below this lid progress the screens are hidden (they face away or are too oblique). */
 const SCREEN_VISIBLE_FROM = 0.82;
+/** The screens fade in over this much lid progress instead of popping in. */
+const SCREEN_FADE = 0.12;
+/** Reading mode: the info screen widens to the viewport, below the lens, at most this wide. */
+const READING_MAX_WIDTH = 640;
+const READING_MARGIN = 8;
 /** Frame-time probe while the lid moves: too slow on average drops the pixel ratio to 1. */
 const PROBE_FRAMES = 30;
 const PROBE_SLOW_MS = 22;
 
 interface Overlay { width: number; height: number; left: number; top: number }
+interface Layout { top: Overlay; bottom: Overlay; vw: number; vh: number }
 
 function Scene({ codex, progress, onFrame }: {
   codex: Codex;
@@ -98,6 +104,8 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
   const unlocked = useDeviceStore((s) => s.unlocked);
   const setUnlocked = useDeviceStore((s) => s.setUnlocked);
   const activeGem = useDeviceStore((s) => s.activeGem);
+  const reading = useDeviceStore((s) => s.reading);
+  const setReading = useDeviceStore((s) => s.setReading);
   const topRef = useSlotRef('top');
   const bottomRef = useSlotRef('bottom');
 
@@ -109,11 +117,14 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
   const topEl = useRef<HTMLDivElement>(null);
   const bottomEl = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
-  const [overlays, setOverlays] = useState<{ top: Overlay; bottom: Overlay } | null>(null);
+  const [layout, setLayout] = useState<Layout | null>(null);
+  const layoutRef = useRef<Layout | null>(null);
+  const needsMeasure = useRef(true);
   const prevT = useRef(progress.get());
+  const readingActive = reading && open && layout != null;
+  const readingRef = useRef(readingActive);
+  readingRef.current = readingActive;
   // Stable ref callbacks (inline ones would re-register the slots on every render).
-  const setTop = useCallback((el: HTMLDivElement | null) => { topEl.current = el; topRef(el); }, [topRef]);
-  const setBottom = useCallback((el: HTMLDivElement | null) => { bottomEl.current = el; bottomRef(el); }, [bottomRef]);
   const setWrapper = useCallback((el: HTMLDivElement | null) => { wrapper.current = el; hapticTarget(el); }, []);
 
   useEffect(() => codex.setActiveTab(activeGem ?? -1), [codex, activeGem]);
@@ -121,9 +132,10 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
   useEffect(
     () =>
       progress.on('change', (v) => {
-        setLidProgress(v);
         for (const e of lidEvents(prevT.current, v)) feedback(e);
         prevT.current = v;
+        // Rest positions only: every store write is also persisted, which stutters the lid.
+        if (v === 0 || v === 1) setLidProgress(v);
       }),
     [progress, setLidProgress],
   );
@@ -138,8 +150,8 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
     return () => c.stop();
   }, [open, reducedMotion, progress]);
 
-  /** Size the DOM screens once, in the open pose, so text never rescales while moving. */
-  const measure = (camera: THREE.PerspectiveCamera, size: { width: number; height: number }) => {
+  /** Size the DOM screens in the open pose, so text never rescales while moving. */
+  const measure = useCallback((camera: THREE.PerspectiveCamera, size: { width: number; height: number }): Layout => {
     const t = codex.t;
     codex.setOpen(1);
     codex.frameCamera(camera, size.width / size.height);
@@ -148,34 +160,78 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
     codex.setOpen(t);
     codex.frameCamera(camera, size.width / size.height);
     const box = (q: CodexScreenQuad): Overlay => ({ width: q.rect.width, height: q.rect.height, left: q.rect.left, top: q.rect.top });
-    setOverlays({ top: box(r.top), bottom: box(r.bottom) });
-  };
+    return { top: box(r.top), bottom: box(r.bottom), vw: size.width, vh: size.height };
+  }, [codex]);
 
-  const onFrame = (camera: THREE.PerspectiveCamera, size: { width: number; height: number }) => {
+  // Stable, so the render loop in <Scene> is not torn down on every render of this component.
+  const onFrame = useCallback((camera: THREE.PerspectiveCamera, size: { width: number; height: number }) => {
     cameraRef.current = camera;
-    if (!overlays) {
-      measure(camera, size);
-      return;
+    if (needsMeasure.current || !layoutRef.current) {
+      needsMeasure.current = false;
+      layoutRef.current = measure(camera, size);
+      setLayout(layoutRef.current);
     }
+    const o = layoutRef.current;
     camera.updateMatrixWorld();
     const rects = codex.getScreenRects(camera, size);
-    const place = (el: HTMLDivElement | null, q: CodexScreenQuad, o: Overlay) => {
+    const fade = Math.min(1, Math.max(0, (codex.t - SCREEN_VISIBLE_FROM) / SCREEN_FADE));
+    const place = (el: HTMLDivElement | null, q: CodexScreenQuad, box: Overlay, docked: boolean) => {
       if (!el) return;
-      const visible = q.facing && codex.t >= SCREEN_VISIBLE_FROM;
+      const visible = q.facing && fade > 0;
       el.style.visibility = visible ? 'visible' : 'hidden';
+      el.style.opacity = fade < 1 ? String(fade) : '';
+      // In reading mode the info screen is laid out by CSS, not glued to the device.
+      if (docked) return;
       el.style.transform = q.axisAligned
-        ? `translate(${q.rect.left - o.left}px, ${q.rect.top - o.top}px)`
-        : quadToMatrix3d(o.width, o.height, q.corners.map((p) => ({ x: p.x - o.left, y: p.y - o.top })));
+        ? `translate(${q.rect.left - box.left}px, ${q.rect.top - box.top}px)`
+        : quadToMatrix3d(box.width, box.height, q.corners.map((p) => ({ x: p.x - box.left, y: p.y - box.top })));
     };
-    place(topEl.current, rects.top, overlays.top);
-    place(bottomEl.current, rects.bottom, overlays.bottom);
-  };
+    place(topEl.current, rects.top, o.top, false);
+    place(bottomEl.current, rects.bottom, o.bottom, readingRef.current);
+  }, [codex, measure]);
 
+  // Re-measure on resize (rotation, toolbars, keyboard) without unmounting the screens: their
+  // content (scroll position, input focus, a running camera) must survive.
   useEffect(() => {
-    const onResize = () => setOverlays(null);
+    const onResize = () => { needsMeasure.current = true; };
     addEventListener('resize', onResize);
     return () => removeEventListener('resize', onResize);
   }, []);
+
+  // Reading mode grows and shrinks the info screen with a FLIP animation on `translate`/`scale`
+  // (the docked transform stays untouched; in reading mode it is overridden by CSS).
+  const flipFrom = useRef<DOMRect | null>(null);
+  const setReadingAnimated = (next: boolean) => {
+    flipFrom.current = bottomEl.current?.getBoundingClientRect() ?? null;
+    feedback(next ? 'open' : 'close');
+    setReading(next);
+  };
+  useLayoutEffect(() => {
+    const el = bottomEl.current;
+    const from = flipFrom.current;
+    flipFrom.current = null;
+    if (!el || !from || reducedMotion || typeof el.animate !== 'function') return;
+    const to = el.getBoundingClientRect();
+    if (!to.width || !to.height) return;
+    el.animate(
+      [
+        { translate: `${from.left - to.left}px ${from.top - to.top}px`, scale: `${from.width / to.width} ${from.height / to.height}` },
+        { translate: '0px 0px', scale: '1 1' },
+      ],
+      { duration: 420, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  }, [readingActive, reducedMotion]);
+
+  const readingStyle = (l: Layout): React.CSSProperties => {
+    const width = Math.min(l.vw - 2 * READING_MARGIN, READING_MAX_WIDTH);
+    return {
+      left: (l.vw - width) / 2,
+      width,
+      top: l.top.top + l.top.height + 10,
+      bottom: `max(${READING_MARGIN}px, env(safe-area-inset-bottom))`,
+      height: 'auto',
+    };
+  };
 
   const unlock = () => {
     if (!unlocked) {
@@ -246,20 +302,53 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
       >
         <Scene codex={codex} progress={progress} onFrame={onFrame} />
       </Canvas>
-      {overlays && (
+      {layout && (
         <>
           <div
-            ref={setTop}
+            ref={topEl}
             className={css.screen}
             data-screen="top"
-            style={{ left: overlays.top.left, top: overlays.top.top, width: overlays.top.width, height: overlays.top.height }}
-          />
+            style={{ left: layout.top.left, top: layout.top.top, width: layout.top.width, height: layout.top.height }}
+          >
+            <div ref={topRef} className={css.slot} />
+          </div>
+          {open && !readingActive && (
+            <button
+              type="button"
+              className={css.grip}
+              data-screen="grip"
+              style={{ left: layout.bottom.left + layout.bottom.width / 2, top: layout.bottom.top }}
+              aria-label="Lesemodus: Infobildschirm vergrößern"
+              ref={hapticTarget}
+              onClick={() => setReadingAnimated(true)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden><path d="M6 15l6-6 6 6" /></svg>
+            </button>
+          )}
           <div
-            ref={setBottom}
+            ref={bottomEl}
             className={css.screen}
             data-screen="bottom"
-            style={{ left: overlays.bottom.left, top: overlays.bottom.top, width: overlays.bottom.width, height: overlays.bottom.height }}
-          />
+            data-reading={readingActive || undefined}
+            style={
+              readingActive
+                ? readingStyle(layout)
+                : { left: layout.bottom.left, top: layout.bottom.top, width: layout.bottom.width, height: layout.bottom.height }
+            }
+          >
+            {readingActive && (
+              <div className={css.readingBar}>
+                <button type="button" className={css.barButton} ref={hapticTarget} aria-label="Zurück" onClick={() => { feedback('back'); emitButton('back'); }}>
+                  <svg viewBox="0 0 24 24" aria-hidden><path d="M15 6l-6 6 6 6" /></svg>
+                </button>
+                <span className={css.barTitle}>Lesemodus</span>
+                <button type="button" className={css.barButton} ref={hapticTarget} aria-label="Lesemodus beenden" onClick={() => setReadingAnimated(false)}>
+                  <svg viewBox="0 0 24 24" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
+                </button>
+              </div>
+            )}
+            <div ref={bottomRef} className={css.slot} />
+          </div>
         </>
       )}
       {/* The 3D keys are not DOM: mirror them for screen readers and keyboards. */}

@@ -35,6 +35,10 @@ export function SearchScreen() {
   const current = items[Math.min(active, items.length - 1)];
 
   useEffect(() => setActive(0), [deferred, colors, types]);
+  // The d-pad moves the highlight; keep it in view inside the small screen.
+  useEffect(() => {
+    document.querySelector('[data-screen="bottom"] [data-active="true"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [active]);
   useEffect(() => {
     const t = setTimeout(() => void navigate({ search: { q: text }, replace: true }), 400);
     return () => clearTimeout(t);
@@ -59,7 +63,7 @@ export function SearchScreen() {
       <TopScreen>
         <div className={css.lens}>
           {current ? (
-            <div className={css.lensCard}><CardImage id={current.scryfallId} name={current.name} /></div>
+            <div key={current.scryfallId} className={css.lensCard}><CardImage id={current.scryfallId} name={current.name} /></div>
           ) : (
             <span className={css.muted}>Name, Typ oder Regeltext eingeben</span>
           )}

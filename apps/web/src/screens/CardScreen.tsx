@@ -62,7 +62,7 @@ export function CardScreen() {
     const i = ENTRY_TABS.indexOf(tab);
     if (b === 'dpad-right') goTab(ENTRY_TABS[(i + 1) % ENTRY_TABS.length]!);
     else if (b === 'dpad-left') goTab(ENTRY_TABS[(i + ENTRY_TABS.length - 1) % ENTRY_TABS.length]!);
-    else if (b === 'dpad-up' || b === 'dpad-down') scroller.current?.scrollBy({ top: b === 'dpad-up' ? -120 : 120, behavior: 'smooth' });
+    else if (b === 'dpad-up' || b === 'dpad-down') scroller.current?.parentElement?.scrollBy({ top: b === 'dpad-up' ? -140 : 140, behavior: 'smooth' });
     else return false;
     return true;
   });
