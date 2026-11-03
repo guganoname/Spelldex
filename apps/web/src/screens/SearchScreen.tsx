@@ -11,12 +11,9 @@ import { CardImage } from '../ui/CardImage.tsx';
 import { ManaCost, Symbol } from '../ui/symbols.tsx';
 import { CatalogGate } from './common.tsx';
 import css from './screen.module.css';
+import { useI18n } from '../i18n/index.ts';
 
-const TYPES = ['Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Land'];
-const TYPE_DE: Record<string, string> = {
-  Creature: 'Kreatur', Instant: 'Spontan', Sorcery: 'Hexerei', Artifact: 'Artefakt',
-  Enchantment: 'Verzauberung', Planeswalker: 'Planeswalker', Land: 'Land',
-};
+const TYPES = ['Creature', 'Instant', 'Sorcery', 'Artifact', 'Enchantment', 'Planeswalker', 'Land'] as const;
 
 export function SearchScreen() {
   const { q } = searchRoute.useSearch();
@@ -24,13 +21,15 @@ export function SearchScreen() {
   const [text, setText] = useState(q);
   const [colors, setColors] = useState<Color[]>([]);
   const [types, setTypes] = useState<string[]>([]);
+  const { t, num } = useI18n();
   const [active, setActive] = useState(0);
   const lang = useDeviceStore((s) => s.prefs.cardLanguage);
   const deferred = useDeferredValue(text);
 
   const query: SearchQuery = { text: deferred, colors, types, colorMatch: 'any', limit: 60 };
   const hasQuery = !!deferred.trim() || colors.length > 0 || types.length > 0;
-  const result = useSearch(query, hasQuery).data;
+  const search = useSearch(query, hasQuery);
+  const result = search.data;
   const items = hasQuery ? result?.items ?? [] : [];
   const current = items[Math.min(active, items.length - 1)];
 
@@ -65,7 +64,7 @@ export function SearchScreen() {
           {current ? (
             <div key={current.scryfallId} className={css.lensCard}><CardImage id={current.scryfallId} name={current.name} /></div>
           ) : (
-            <span className={css.muted}>Name, Typ oder Regeltext eingeben</span>
+            <span className={css.muted}>{t('search.lensHint')}</span>
           )}
         </div>
       </TopScreen>
@@ -78,10 +77,10 @@ export function SearchScreen() {
               inputMode="search"
               enterKeyHint="search"
               autoFocus
-              placeholder="z. B. Drache, Blitzschlag, draw a card"
+              placeholder={t('search.placeholder')}
               value={text}
               onChange={(e) => setText(e.target.value)}
-              aria-label="Suche"
+              aria-label={t('search.label')}
             />
             <div className={css.chips}>
               {COLORS.map((c) => (
@@ -89,13 +88,23 @@ export function SearchScreen() {
                   <Symbol code={c} />
                 </button>
               ))}
-              {TYPES.map((t) => (
-                <button key={t} type="button" className={css.chip} aria-pressed={types.includes(t)} ref={hapticTarget} onClick={() => toggle(types, t, setTypes)}>
-                  {TYPE_DE[t]}
+              {TYPES.map((ty) => (
+                <button key={ty} type="button" className={css.chip} aria-pressed={types.includes(ty)} ref={hapticTarget} onClick={() => toggle(types, ty, setTypes)}>
+                  {t(`type.${ty}`)}
                 </button>
               ))}
             </div>
-            {hasQuery && result && <p className={css.muted}>{result.total.toLocaleString('de-DE')} Karten</p>}
+            {hasQuery && result && result.total > 0 && <p className={css.muted}>{t('search.count', { n: num(result.total) })}</p>}
+            {hasQuery && result && result.total === 0 && !search.isPlaceholderData && (
+              <div style={{ display: 'grid', gap: 8 }}>
+                <p className={css.muted}>{t('search.none')}</p>
+                {(colors.length > 0 || types.length > 0) && (
+                  <button type="button" className={css.button} ref={hapticTarget} onClick={() => { feedback('press'); setColors([]); setTypes([]); }}>
+                    {t('search.clear')}
+                  </button>
+                )}
+              </div>
+            )}
             <ul className={css.list}>
               {items.map((c, i) => (
                 <li key={c.oracleId}>

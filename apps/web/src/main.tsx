@@ -4,12 +4,15 @@ import { RouterProvider } from '@tanstack/react-router';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import '@spelldex/design/tokens.css';
 import './styles/global.css';
+import './app/fonts.ts';
 import { router } from './app/router.tsx';
 import { bootstrap } from './app/bootstrap.ts';
 import { persister, PERSISTED_ROOTS, queryClient } from './data/net.ts';
 import { ScreenSlotsProvider } from './device/slots.tsx';
 import { registerServiceWorker } from './app/pwa.ts';
+import { armSplashSafety } from './app/splash.ts';
 
+armSplashSafety();
 void bootstrap().catch((e) => console.error('[bootstrap]', e));
 registerServiceWorker();
 

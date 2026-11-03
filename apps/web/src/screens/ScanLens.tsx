@@ -9,6 +9,7 @@ import { initialScanFeedback, scanFeedback, type ScanFeedbackState } from '@spel
 import { CameraUnavailableError, startCameraScan, type CameraScan } from '@spelldex/scanner/camera';
 import type { ScanFrameResult, ScanMatch } from '@spelldex/shared/contracts';
 import css from './scan.module.css';
+import { useI18n, type I18n } from '../i18n/index.ts';
 
 interface Props {
   indexUrl: string;
@@ -31,6 +32,7 @@ export function ScanLens({ indexUrl, onPick }: Props) {
   const [candidates, setCandidates] = useState<ScanMatch[] | null>(null);
   const [hint, setHint] = useState(false);
   const [torch, setTorch] = useState(false);
+  const { t } = useI18n();
 
   const mounted = useRef(true);
   useEffect(() => {
@@ -82,7 +84,7 @@ export function ScanLens({ indexUrl, onPick }: Props) {
       if (!mounted.current) return;
       feedback('error');
       setPhase('error');
-      setError(cameraError(e));
+      setError(cameraError(e, t));
     }
   };
 
@@ -117,30 +119,30 @@ export function ScanLens({ indexUrl, onPick }: Props) {
         <div className={css.veil}>
           {phase === 'error'
             ? <p role="alert">{error}</p>
-            : <p>Halte eine Karte vor die Linse. Spelldex erkennt sie am Bild, ganz ohne Internet.</p>}
+            : <p>{t('scan.intro')}</p>}
           <button type="button" className={css.openButton} ref={hapticTarget} onClick={open} disabled={phase === 'starting'}>
-            {phase === 'starting' ? 'Linse erwacht …' : phase === 'error' ? 'Nochmal versuchen' : 'Linse öffnen'}
+            {phase === 'starting' ? t('scan.waking') : phase === 'error' ? t('common.retry') : t('scan.open')}
           </button>
-          {phase === 'starting' && <p className={css.small}>Falls gefragt: Kamerazugriff erlauben.</p>}
+          {phase === 'starting' && <p className={css.small}>{t('scan.permission')}</p>}
         </div>
       )}
       {phase === 'loading' && (
         <div className={css.hud}>
-          <span className={css.hint}>Erkennung wird geladen …</span>
+          <span className={css.hint}>{t('scan.loading')}</span>
         </div>
       )}
       {phase === 'running' && (
         <div className={css.hud}>
-          {hint && <span className={css.hint}>Mehr Licht hilft{scan.current?.torchAvailable ? ' – Taschenlampe?' : '.'}</span>}
+          {hint && <span className={css.hint}>{t('scan.moreLight')}{scan.current?.torchAvailable ? t('scan.torchQ') : '.'}</span>}
           {scan.current?.torchAvailable && (
             <button type="button" className={css.torch} aria-pressed={torch} ref={hapticTarget} onClick={toggleTorch}>
-              Licht
+              {t('scan.torch')}
             </button>
           )}
         </div>
       )}
       {candidates && (
-        <div className={css.candidates} role="group" aria-label="Welche Karte?">
+        <div className={css.candidates} role="group" aria-label={t('scan.which')}>
           {candidates.map((c) => (
             <button key={c.scryfallId} type="button" ref={hapticTarget} onClick={() => pick(c)}>
               {c.set.toUpperCase()} #{c.collectorNumber}
@@ -152,14 +154,14 @@ export function ScanLens({ indexUrl, onPick }: Props) {
   );
 }
 
-function cameraError(e: unknown): string {
-  if (e instanceof CameraUnavailableError) return e.message;
+function cameraError(e: unknown, t: I18n['t']): string {
+  if (e instanceof CameraUnavailableError) return t(typeof isSecureContext !== 'undefined' && !isSecureContext ? 'scan.https' : 'scan.unsupported');
   if (e instanceof DOMException) {
     if (e.name === 'NotAllowedError' || e.name === 'SecurityError') {
-      return 'Kein Zugriff auf die Kamera. Auf dem iPhone: Einstellungen › Chrome (bzw. Safari) › Kamera erlauben, dann neu laden.';
+      return t('scan.denied');
     }
-    if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') return 'Keine passende Kamera gefunden.';
-    if (e.name === 'NotReadableError' || e.name === 'AbortError') return 'Die Kamera wird gerade von einer anderen App benutzt.';
+    if (e.name === 'NotFoundError' || e.name === 'OverconstrainedError') return t('scan.noCamera');
+    if (e.name === 'NotReadableError' || e.name === 'AbortError') return t('scan.busy');
   }
-  return `Die Linse lässt sich nicht öffnen: ${(e as Error)?.message ?? String(e)}`;
+  return t('scan.failed', { msg: (e as Error)?.message ?? String(e) });
 }

@@ -15,6 +15,7 @@ import { useManifest, useMarkSeen } from '../data/hooks.ts';
 import { CatalogGate } from './common.tsx';
 import { ScanLens } from './ScanLens.tsx';
 import css from './screen.module.css';
+import { useI18n } from '../i18n/index.ts';
 
 export function ScanScreen() {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ export function ScanScreen() {
   const [setCode, setSetCode] = useState('');
   const [number, setNumber] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
 
   const manifest = useManifest().data;
   const scanIndex = manifest?.artifacts.scanIndex;
@@ -39,10 +41,11 @@ export function ScanScreen() {
 
   const lookup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const card = await data().catalog.findBySetNumber(setCode.trim(), number.trim());
+    if (!setCode.trim() || !number.trim()) return;
+    const card = await data().catalog.findBySetNumber(setCode.trim(), number.trim()).catch(() => null);
     if (!card) {
       feedback('error');
-      setError('Keine Karte mit diesem Set-Code und dieser Nummer.');
+      setError(t('scan.notFound'));
       return;
     }
     setError(null);
@@ -59,25 +62,25 @@ export function ScanScreen() {
               open(m.scryfallId).catch(() => {
                 // Index and catalog out of sync (e.g. a print missing from this data version).
                 feedback('error');
-                setError(`Karte erkannt (${m.set.toUpperCase()} #${m.collectorNumber}), aber nicht im Katalog.`);
+                setError(t('scan.notInCatalog', { set: m.set.toUpperCase(), n: m.collectorNumber }));
               })
             }
           />
         ) : (
           <div className={css.center}>
-            <p className={css.muted}>Für diese Datenversion gibt es keinen Bild-Index. Set-Code und Nummer unten links auf der Karte eingeben.</p>
+            <p className={css.muted}>{t('scan.noIndex')}</p>
           </div>
         )}
       </TopScreen>
       <BottomScreen>
         <CatalogGate>
           <form className={css.pane} onSubmit={lookup}>
-            <span className={css.subtitle}>Karte eintragen</span>
+            <span className={css.subtitle}>{t('scan.enter')}</span>
             <div className={css.row}>
-              <input className={css.input} placeholder="Set, z. B. DSK" value={setCode} onChange={(e) => setSetCode(e.target.value)} autoCapitalize="characters" aria-label="Set-Code" />
-              <input className={css.input} placeholder="Nr., z. B. 123" value={number} onChange={(e) => setNumber(e.target.value)} inputMode="numeric" aria-label="Sammlernummer" />
+              <input className={css.input} placeholder={t('scan.setPlaceholder')} value={setCode} onChange={(e) => setSetCode(e.target.value)} autoCapitalize="characters" aria-label={t('scan.setLabel')} autoComplete="off" autoCorrect="off" spellCheck={false} enterKeyHint="next" />
+              <input className={css.input} placeholder={t('scan.numberPlaceholder')} value={number} onChange={(e) => setNumber(e.target.value)} inputMode="numeric" aria-label={t('scan.numberLabel')} autoComplete="off" enterKeyHint="done" />
             </div>
-            <button type="submit" className={css.button} ref={hapticTarget}>Eintragen</button>
+            <button type="submit" className={css.button} ref={hapticTarget} disabled={!setCode.trim() || !number.trim()}>{t('scan.submit')}</button>
             {error && <p className={css.muted} role="alert">{error}</p>}
           </form>
         </CatalogGate>

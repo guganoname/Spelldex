@@ -1,3 +1,5 @@
+/* Bundled variable Inter registers as "Inter Variable"; put it first for the UI font. */
+:root { --sd-font-ui: 'Inter Variable', Inter, system-ui, -apple-system, sans-serif; }
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; margin: 0; }
 body {

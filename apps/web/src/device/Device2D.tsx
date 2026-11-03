@@ -8,9 +8,11 @@ import { useDrag } from '@use-gesture/react';
 import { motion as motionTokens } from '@spelldex/design/tokens';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
 import type { DeviceButton, GemIndex } from '@spelldex/shared/contracts';
-import { ENTRY_TAB_LABELS, tabForGem } from '@spelldex/shared/contracts';
+import { tabForGem } from '@spelldex/shared/contracts';
 import { emitButton, useDeviceStore } from '../state/device.ts';
 import { useSlotRef } from './slots.tsx';
+import { useI18n } from '../i18n/index.ts';
+import { hideSplash } from '../app/splash.ts';
 import css from './Device2D.module.css';
 
 const GEMS: { gem: GemIndex; mana: string }[] = [
@@ -44,6 +46,10 @@ export default function Device2D({ reducedMotion }: { reducedMotion: boolean }) 
   const activeGem = useDeviceStore((s) => s.activeGem);
   const topRef = useSlotRef('top');
   const bottomRef = useSlotRef('bottom');
+  const { t, tab } = useI18n();
+
+  // Painted on mount (pure CSS): the boot splash can go.
+  useEffect(hideSplash, []);
 
   // progress 0 = closed (lid down over the body), 1 = open.
   const progress = useMotionValue(open ? 1 : 0);
@@ -111,7 +117,7 @@ export default function Device2D({ reducedMotion }: { reducedMotion: boolean }) 
             </motion.div>
           </div>
           <motion.div className={css.cover} style={{ opacity: coverOpacity }} aria-hidden={open}>
-            <button type="button" ref={hapticTarget} className={css.seal} onClick={() => toggle(true)} aria-label="Spelldex öffnen">
+            <button type="button" ref={hapticTarget} className={css.seal} onClick={() => toggle(true)} aria-label={t('device.open')}>
               <span className={css.sealRune}>✦</span>
             </button>
             <p className={css.coverTitle}>SPELLDEX</p>
@@ -119,7 +125,7 @@ export default function Device2D({ reducedMotion }: { reducedMotion: boolean }) 
         </motion.section>
 
         <div className={css.hinge} aria-hidden>
-          <button type="button" className={css.hingeKnob} tabIndex={-1} onClick={() => toggle(false)} aria-label="Schließen" />
+          <button type="button" className={css.hingeKnob} tabIndex={-1} onClick={() => toggle(false)} aria-label={t('device.close')} />
         </div>
 
         {/* Lower half: info screen and controls in the thumb zone. */}
@@ -128,27 +134,27 @@ export default function Device2D({ reducedMotion }: { reducedMotion: boolean }) 
             <div ref={bottomRef} className={css.screen} data-screen="bottom" />
           </div>
           <div className={css.controls}>
-            <div className={css.dpad} role="group" aria-label="Steuerkreuz">
-              <Key button="dpad-up" className={`${css.dkey} ${css.up}`} label="Hoch" />
-              <Key button="dpad-left" className={`${css.dkey} ${css.left}`} label="Links" />
-              <Key button="dpad-right" className={`${css.dkey} ${css.right}`} label="Rechts" />
-              <Key button="dpad-down" className={`${css.dkey} ${css.down}`} label="Runter" />
+            <div className={css.dpad} role="group" aria-label={t('device.dpad')}>
+              <Key button="dpad-up" className={`${css.dkey} ${css.up}`} label={t('device.up')} />
+              <Key button="dpad-left" className={`${css.dkey} ${css.left}`} label={t('device.left')} />
+              <Key button="dpad-right" className={`${css.dkey} ${css.right}`} label={t('device.right')} />
+              <Key button="dpad-down" className={`${css.dkey} ${css.down}`} label={t('device.down')} />
             </div>
-            <Key button="scan" className={css.scan} label="Scannen">
+            <Key button="scan" className={css.scan} label={t('device.scan')}>
               <span aria-hidden>◉</span>
             </Key>
             <div className={css.smallKeys}>
-              <Key button="back" className={css.small} label="Zurück">‹</Key>
-              <Key button="search" className={css.small} label="Suchen">⌕</Key>
+              <Key button="back" className={css.small} label={t('device.back')}>‹</Key>
+              <Key button="search" className={css.small} label={t('device.search')}>⌕</Key>
             </div>
           </div>
-          <div className={css.gems} role="tablist" aria-label="Eintrag">
+          <div className={css.gems} role="tablist" aria-label={t('device.entry')}>
             {GEMS.map(({ gem, mana }) => (
               <Key
                 key={gem}
                 button={`gem-${gem}`}
                 className={`${css.gem} ${css[`gem_${mana}`] ?? ''}`}
-                label={ENTRY_TAB_LABELS[tabForGem(gem)]}
+                label={tab(tabForGem(gem))}
               >
                 <span className={css.gemCore} data-active={activeGem === gem || undefined} />
               </Key>

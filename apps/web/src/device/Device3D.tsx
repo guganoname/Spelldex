@@ -5,16 +5,18 @@
  * Springs, gestures, picking and feedback live here; the codex only maps t to a pose.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { animate, useMotionValue } from 'motion/react';
 import { useDrag } from '@use-gesture/react';
 import type * as THREE from 'three';
 import { createCodex, lidEvents, tokensFromDesign, quadToMatrix3d, type Codex, type CodexScreenQuad } from '@spelldex/device-3d';
 import { motion as motionTokens, tokens as designTokens } from '@spelldex/design/tokens';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
-import { ENTRY_TAB_LABELS, tabForGem, type DeviceButton, type GemIndex } from '@spelldex/shared/contracts';
+import { tabForGem, type DeviceButton, type GemIndex } from '@spelldex/shared/contracts';
 import { emitButton, useDeviceStore } from '../state/device.ts';
 import { useSlotRef } from './slots.tsx';
+import { useI18n } from '../i18n/index.ts';
+import { hideSplash } from '../app/splash.ts';
 import css from './Device3D.module.css';
 
 /** Below this lid progress the screens are hidden (they face away or are too oblique). */
@@ -27,6 +29,8 @@ const READING_MARGIN = 8;
 /** Frame-time probe while the lid moves: too slow on average drops the pixel ratio to 1. */
 const PROBE_FRAMES = 30;
 const PROBE_SLOW_MS = 22;
+/** A lost GPU context that the browser does not give back within this time ends the 3D shell. */
+const CONTEXT_RESTORE_MS = 3000;
 
 interface Overlay { width: number; height: number; left: number; top: number }
 interface Layout { top: Overlay; bottom: Overlay; vw: number; vh: number }
@@ -38,6 +42,14 @@ function Scene({ codex, progress, onFrame }: {
 }) {
   const { camera, size, invalidate, gl, scene, setDpr } = useThree();
   const cam = camera as THREE.PerspectiveCamera;
+
+  // The first rendered frame (closed, fully lit) ends the boot splash.
+  const shown = useRef(false);
+  useFrame(() => {
+    if (shown.current) return;
+    shown.current = true;
+    hideSplash();
+  });
 
   // Reflections, AgX tone mapping and the warm key light from the top left the materials are tuned
   // for. Without the reflections brass renders almost black.
@@ -97,7 +109,7 @@ function Scene({ codex, progress, onFrame }: {
   );
 }
 
-export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) {
+export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boolean; onFail(e: unknown): void }) {
   const open = useDeviceStore((s) => s.open);
   const setOpen = useDeviceStore((s) => s.setOpen);
   const setLidProgress = useDeviceStore((s) => s.setLidProgress);
@@ -108,6 +120,9 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
   const setReading = useDeviceStore((s) => s.setReading);
   const topRef = useSlotRef('top');
   const bottomRef = useSlotRef('bottom');
+  const { t, tab } = useI18n();
+  const onFailRef = useRef(onFail);
+  onFailRef.current = onFail;
 
   const codex = useMemo(() => createCodex({ tokens: tokensFromDesign(designTokens) }), []);
   useEffect(() => () => codex.dispose(), [codex]);
@@ -299,6 +314,7 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
         dpr={[1, 2]}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         camera={{ fov: 30, near: 0.1, far: 100, position: [0, 0, 10] }}
+        onCreated={({ gl, invalidate }) => watchContext(gl.domElement, () => onFailRef.current(new Error('WebGL context lost')), invalidate)}
       >
         <Scene codex={codex} progress={progress} onFrame={onFrame} />
       </Canvas>
@@ -318,7 +334,7 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
               className={css.grip}
               data-screen="grip"
               style={{ left: layout.bottom.left + layout.bottom.width / 2, top: layout.bottom.top }}
-              aria-label="Lesemodus: Infobildschirm vergrößern"
+              aria-label={t('device.readingOpen')}
               ref={hapticTarget}
               onClick={() => setReadingAnimated(true)}
             >
@@ -338,11 +354,11 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
           >
             {readingActive && (
               <div className={css.readingBar}>
-                <button type="button" className={css.barButton} ref={hapticTarget} aria-label="Zurück" onClick={() => { feedback('back'); emitButton('back'); }}>
+                <button type="button" className={css.barButton} ref={hapticTarget} aria-label={t('device.back')} onClick={() => { feedback('back'); emitButton('back'); }}>
                   <svg viewBox="0 0 24 24" aria-hidden><path d="M15 6l-6 6 6 6" /></svg>
                 </button>
-                <span className={css.barTitle}>Lesemodus</span>
-                <button type="button" className={css.barButton} ref={hapticTarget} aria-label="Lesemodus beenden" onClick={() => setReadingAnimated(false)}>
+                <span className={css.barTitle}>{t('device.reading')}</span>
+                <button type="button" className={css.barButton} ref={hapticTarget} aria-label={t('device.readingClose')} onClick={() => setReadingAnimated(false)}>
                   <svg viewBox="0 0 24 24" aria-hidden><path d="M6 9l6 6 6-6" /></svg>
                 </button>
               </div>
@@ -352,18 +368,33 @@ export default function Device3D({ reducedMotion }: { reducedMotion: boolean }) 
         </>
       )}
       {/* The 3D keys are not DOM: mirror them for screen readers and keyboards. */}
-      <nav className={css.srOnly} aria-label="Gerätetasten">
-        {!open && <button type="button" onClick={() => toggle(true)}>Spelldex öffnen</button>}
-        {open && <button type="button" onClick={() => toggle(false)}>Schließen</button>}
+      <nav className={css.srOnly} aria-label={t('device.keys')}>
+        {!open && <button type="button" onClick={() => toggle(true)}>{t('device.open')}</button>}
+        {open && <button type="button" onClick={() => toggle(false)}>{t('device.close')}</button>}
         {(['scan', 'search', 'back'] as DeviceButton[]).map((b) => (
-          <button key={b} type="button" onClick={() => emitButton(b)}>{{ scan: 'Scannen', search: 'Suchen', back: 'Zurück' }[b as 'scan']}</button>
+          <button key={b} type="button" onClick={() => emitButton(b)}>{t(`device.${b as 'scan' | 'search' | 'back'}`)}</button>
         ))}
         {([0, 1, 2, 3, 4] as GemIndex[]).map((g) => (
           <button key={g} type="button" aria-pressed={activeGem === g} onClick={() => emitButton(`gem-${g}`)}>
-            {ENTRY_TAB_LABELS[tabForGem(g)]}
+            {tab(tabForGem(g))}
           </button>
         ))}
       </nav>
     </div>
   );
+}
+
+/** Browsers may drop the GPU context (memory pressure, backgrounded tab). three.js restores itself
+ * when the browser hands it back; if that does not happen soon, the host switches to 2D. */
+function watchContext(canvas: HTMLCanvasElement, fail: () => void, restored: () => void) {
+  let timer = 0;
+  canvas.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    clearTimeout(timer);
+    timer = window.setTimeout(fail, CONTEXT_RESTORE_MS);
+  });
+  canvas.addEventListener('webglcontextrestored', () => {
+    clearTimeout(timer);
+    restored();
+  });
 }
