@@ -19,6 +19,7 @@ import { ManaCost, SymbolText } from '../ui/symbols.tsx';
 import { Sparkline } from '../ui/Sparkline.tsx';
 import { CatalogGate } from './common.tsx';
 import { useI18n, type Lang } from '../i18n/index.ts';
+import { DexEntry } from './DexEntry.tsx';
 import css from './screen.module.css';
 
 const FORMAT_LABEL: Record<string, string> = {
@@ -110,6 +111,7 @@ export function CardScreen() {
                   ))}
                 </div>
                 <div role="tabpanel">
+                  {tab === 'overview' && <DexEntry card={card} face={back ? 1 : 0} />}
                   {tab === 'overview' && <Overview card={card} lang={lang} />}
                   {tab === 'market' && <Market card={card} />}
                   {tab === 'combos' && <Combos card={card} />}

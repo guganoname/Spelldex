@@ -10,7 +10,8 @@
     "./scryfall": "./src/scryfall/index.ts",
     "./scan": "./src/scan/index.ts",
     "./rules": "./src/rules/index.ts",
-    "./collection": "./src/collection/index.ts"
+    "./collection": "./src/collection/index.ts",
+    "./dex": "./src/dex/index.ts"
   },
   "scripts": { "typecheck": "tsc -p tsconfig.json" }
 }
