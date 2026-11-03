@@ -31,7 +31,7 @@ export const persister = createAsyncStoragePersister({
 });
 
 /** Only network queries are persisted; catalog queries are cheap and local. */
-export const PERSISTED_ROOTS = new Set(['scryfall', 'lore', 'price-history', 'manifest']);
+export const PERSISTED_ROOTS = new Set(['scryfall', 'lore', 'price-history', 'manifest', 'art-caption']);
 
 export const SCRYFALL_STALE = SCRYFALL_CACHE_MS;
 

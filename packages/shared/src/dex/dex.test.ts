@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDexStat, generateDexEntry, type DexInput } from './index.ts';
+import { formatDexStat, generateDexEntry, parseArtCaption, type DexInput } from './index.ts';
 
 const base: DexInput = {
   seed: 'x', name: 'Test', typeLine: 'Creature — Human', typeLineDe: null, oracleText: null, flavorText: null,
@@ -84,5 +84,37 @@ describe('dex entry', () => {
     expect(f(1234, 'hp')).toBe('1.234 PS');
     expect(f(1234, 'hp', 'en')).toBe('1,234 hp');
     expect(f(12, 'percent', 'en')).toBe('12%');
+  });
+});
+
+describe('artwork hints', () => {
+  const ratchetCaption = 'A cartoon image of a van. The van is gray with a red stripe down the middle. There are black wheels on the van. There appears to be smoke coming out of the van and the ground. There looks to be a tree trunk on the right side of the image.';
+
+  it('parses subjects, scenes and colours from a caption', () => {
+    const a = parseArtCaption(ratchetCaption);
+    expect(a.subjects[0]!.key).toBe('van');
+    expect(a.colors.map((c) => c.en)).toEqual(['grey', 'red', 'black']);
+    expect(a.scenes).toContain('fire');
+  });
+
+  it('refines a vehicle with what the art shows', () => {
+    const input = { ...base, name: 'Ratchet, Rescue Racer', typeLine: 'Legendary Artifact — Vehicle', power: '1', toughness: '4', oracleText: 'Living metal' };
+    const plain = generateDexEntry(input);
+    const art = generateDexEntry(input, parseArtCaption(ratchetCaption));
+    expect(art.category.de).toBe('Licht-Transporter');
+    expect(spec(art, 'seen')!.text!.de).toContain('Transporter');
+    expect(spec(art, 'coloring')!.text!.de).toBe('grau, rot, schwarz');
+    expect(spec(art, 'fire')).toBeDefined();
+    // Same seed, same base numbers: the art adds information, it does not reshuffle.
+    expect(spec(art, 'horsepower')).toEqual(spec(plain, 'horsepower'));
+  });
+
+  it('turns a ship card into a ship and a generic creature into what is drawn', () => {
+    const boat = generateDexEntry({ ...base, name: 'Mystery Machine', typeLine: 'Artifact — Vehicle', power: '3', toughness: '3' }, parseArtCaption('A large wooden ship sailing on the ocean.'));
+    expect(spec(boat, 'speed')!.unit).toBe('knots');
+    expect(boat.habitat.en).toBe('Waters and coasts');
+    const thing = generateDexEntry({ ...base, typeLine: 'Creature — Shapeshifter' }, parseArtCaption('A wolf howling at the moon in a dark forest.'));
+    expect(thing.category.en).toBe('Radiant Wolf');
+    expect(thing.habitat.de).toBe('Dichte Wälder');
   });
 });
