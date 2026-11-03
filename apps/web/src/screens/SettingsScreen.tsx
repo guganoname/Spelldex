@@ -6,6 +6,8 @@ import { useDeviceStore } from '../state/device.ts';
 import { requestPersistentStorage } from '../app/bootstrap.ts';
 import { useI18n } from '../i18n/index.ts';
 import { LanguageSwitch } from './common.tsx';
+import { disableArtAi, ensureArtAi, useArtAiStatus } from '../ai/client.ts';
+import { ART_MODEL_MB } from '../ai/model.ts';
 import css from './screen.module.css';
 
 function Toggle({ label, value, onChange }: { label: string; value: boolean; onChange(v: boolean): void }) {
@@ -32,6 +34,7 @@ export function SettingsScreen() {
   const catalog = useCatalogReady();
   const { t, num } = useI18n();
   const [persisted, setPersisted] = useState<boolean | null>(null);
+  const ai = useArtAiStatus((s) => s.status);
   return (
     <>
       <TopScreen>
@@ -63,6 +66,30 @@ export function SettingsScreen() {
           <Toggle label={t('settings.haptics')} value={prefs.haptics} onChange={(haptics) => setPrefs({ haptics })} />
           {isIOS && (
             <Toggle label={t('settings.iosPatterns')} value={prefs.iosHaptics === 'hybrid'} onChange={(v) => setPrefs({ iosHaptics: v ? 'hybrid' : 'tap' })} />
+          )}
+          <hr className={css.hr} />
+          <Toggle
+            label={t('settings.artAi')}
+            value={prefs.artAi}
+            onChange={(artAi) => {
+              setPrefs({ artAi });
+              if (artAi) void ensureArtAi().catch(() => undefined);
+              else void disableArtAi(false);
+            }}
+          />
+          <p className={css.muted} style={{ margin: '-6px 0 0' }}>{t('settings.artAiHint', { mb: ART_MODEL_MB })}</p>
+          {prefs.artAi && ai.state === 'loading' && (
+            <div role="status" aria-label={t('settings.artAiLoading', { pct: Math.round(ai.progress * 100) })}>
+              <p className={css.muted} style={{ margin: '0 0 4px' }}>{t('settings.artAiLoading', { pct: Math.round(ai.progress * 100) })}</p>
+              <div className={css.bar}><div className={css.barFill} style={{ width: `${Math.round(ai.progress * 100)}%` }} /></div>
+            </div>
+          )}
+          {prefs.artAi && ai.state === 'ready' && <p className={css.muted} role="status">{t('settings.artAiReady', { device: ai.device === 'webgpu' ? 'WebGPU' : 'WASM' })}</p>}
+          {prefs.artAi && ai.state === 'error' && <p className={css.muted} role="status">{t('settings.artAiError', { msg: ai.message })}</p>}
+          {!prefs.artAi && (
+            <button type="button" className={css.button} ref={hapticTarget} onClick={() => { feedback('press'); void disableArtAi(true); }}>
+              {t('settings.artAiDelete')}
+            </button>
           )}
           <hr className={css.hr} />
           <Toggle label={t('settings.reducedMotion')} value={prefs.reducedMotion ?? false} onChange={(v) => setPrefs({ reducedMotion: v })} />

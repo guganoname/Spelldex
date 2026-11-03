@@ -9,6 +9,7 @@ import type { Color } from '../contracts/card.ts';
 import {
   BODIES, COLOR_ADJ, COLOR_HABITAT, COLOR_MOOD, JOBS, LIFESPAN, SNACKS, type Body, type BodyPlan,
 } from './tables.ts';
+import { SCENE_HABITAT, type ArtHints, type SceneKey } from './art.ts';
 import type { DexEntry, DexInput, DexKind, DexStat, DexUnit, Loc } from './types.ts';
 
 // --- deterministic randomness -----------------------------------------------------------------
@@ -64,6 +65,8 @@ interface Parsed {
   has: (keyword: string) => boolean;
   color: Color | 'multi' | 'colorless';
   mainColor: Color | 'colorless';
+  /** Optional hints from the artwork caption (AI setting on). */
+  art: ArtHints | null;
 }
 
 /** Keywords on their own line ("Flying, vigilance"), reminder text removed, plus MTGJSON keywords. */
@@ -80,7 +83,7 @@ function keywordSet(text: string, keywords: string[]): Set<string> {
   return set;
 }
 
-function parse(c: DexInput): Parsed {
+function parse(c: DexInput, art: ArtHints | null): Parsed {
   const [front = '', back = ''] = c.typeLine.split('//')[0]!.split('—').map((s) => s.trim());
   const words = front.split(/\s+/).filter(Boolean);
   const text = c.oracleText ?? '';
@@ -96,6 +99,7 @@ function parse(c: DexInput): Parsed {
     has,
     color,
     mainColor: c.colors[0] ?? 'colorless',
+    art,
   };
 }
 
@@ -176,7 +180,7 @@ function sentences(p: Parsed, max: number): Loc[] {
     if (out.length >= max) break;
     if (p.has(k) && !out.includes(line)) out.push(line);
   }
-  const theme = THEMES.find(([re]) => re.test(p.flavor) || re.test(p.text));
+  const theme = THEMES.find(([re]) => re.test(p.art?.caption ?? '') || re.test(p.flavor) || re.test(p.text));
   if (theme) out.push(theme[1]);
   return out;
 }
@@ -241,8 +245,10 @@ const GENERIC_BEING: Body = { de: 'Wesen', en: 'Being', plan: 'humanoid', h: 1.8
 function creature(c: DexInput, p: Parsed): DexEntry {
   const matched = p.subtypes.map((s) => [s, BODIES[s]] as const).filter((x): x is readonly [string, Body] => x[1] != null);
   const isArtifact = p.types.includes('Artifact');
+  const artBody = p.art?.subjects.map((x) => x.body).find((k) => k != null && BODIES[k] != null);
   const [bodyKey, body] = matched.length
     ? [...matched].sort((a, b) => b[1].kg - a[1].kg)[0]!
+    : artBody ? ([artBody, BODIES[artBody]!] as const)
     : isArtifact ? (['Construct', BODIES.Construct!] as const) : (['', GENERIC_BEING] as const);
   const plans = new Set(matched.map(([, x]) => x.plan));
   const ghostly = plans.has('spirit') && body.plan !== 'spirit';
@@ -251,7 +257,7 @@ function creature(c: DexInput, p: Parsed): DexEntry {
   const r = (id: string) => rngFor(`${c.seed}|${id}`);
 
   const s = sizeScore(c);
-  const scale = clamp(Math.pow(1.2, s - body.ref), 0.2, 12);
+  const scale = clamp(Math.pow(1.2, s - body.ref), 0.2, 12) * artScale(p);
   const height = sig(r('h').jitter(body.h * scale));
   let weight = sig(r('kg').jitter(body.kg * scale ** 3, 0.18));
   if (body.plan === 'spirit' || ghostly) weight = sig(r('kg').between(0.015, 0.03));
@@ -349,6 +355,9 @@ const VEHICLE_HABITAT: Record<VehicleMode, Loc> = {
 
 function vehicleMode(c: DexInput, p: Parsed): VehicleMode {
   const n = c.name;
+  const seen = p.art?.subjects.find((x) => x.vehicle)?.vehicle;
+  // The artwork wins, except that a car in a "racer" card stays a racer.
+  if (seen && !(seen === 'land' && /racer|racing|speed|dragster|kart|rally/i.test(n))) return seen;
   if (p.subtypes.includes('Spacecraft') || /spacecraft|starship|shuttle|star\b/i.test(n)) return 'space';
   if (/racer|racing|speed|dragster|kart|rally|hot ?rod/i.test(n)) return 'racer';
   if (/train|express|locomotive|railway|rail/i.test(n)) return 'rail';
@@ -377,7 +386,7 @@ function vehicle(c: DexInput, p: Parsed): DexEntry {
   if (mode === 'racer' || mode === 'land' || mode === 'rail') {
     specs.push(stat('accel', L('0 auf 100 km/h', '0 to 100 km/h'), sig(clamp(r('acc').jitter(14 - 1.5 * pw - (haste ? 3 : 0)), 1.9, 30), 2), 'seconds'));
   }
-  const mult = { racer: 0.5, land: 1, ship: 40, air: 6, space: 60, mech: 4, rail: 30 }[mode];
+  const mult = { racer: 0.5, land: 1, ship: 40, air: 6, space: 60, mech: 4, rail: 30 }[mode] * artScale(p) ** 3;
   specs.push(stat('weight', L('Leergewicht', 'Curb weight'), sig(r('kg').jitter(700 * Math.pow(1.45, tg) * mult)), 'kg'));
   specs.push(stat('length', L('Länge', 'Length'), sig(r('len').jitter(4.5 * Math.pow(1.12, tg) * Math.cbrt(mult))), 'm'));
   if (mode === 'air') specs.push(stat('ceiling', L('Flughöhe', 'Service ceiling'), sig(r('ceil').jitter(1500 * Math.pow(1.3, pw))), 'm'));
@@ -395,7 +404,7 @@ function vehicle(c: DexInput, p: Parsed): DexEntry {
   ];
   if (/Living metal|More Than Meets the Eye/i.test(p.text)) funny.push(stat('transform', L('Verwandlungszeit', 'Transform time'), sig(r('tf').between(0.8, 3.5), 2), 'seconds'));
 
-  const name = VEHICLE_NAME[mode];
+  const name = p.art?.subjects.find((x) => x.vehicle)?.name ?? VEHICLE_NAME[mode];
   const adj = COLOR_ADJ[p.color];
   const category = L(`${adj.de}-${name.de}`, `${adj.en} ${name.en}`);
   const intro = L(`${c.name}: ${category.de} mit ${Math.round(hp)} PS unter der Haube.`, `${c.name}: a ${category.en} with ${Math.round(hp)} hp under the hood.`);
@@ -605,17 +614,50 @@ function battle(c: DexInput, p: Parsed): DexEntry {
 
 // --- entry point ------------------------------------------------------------------------------
 
-export function generateDexEntry(card: DexInput): DexEntry {
-  const p = parse(card);
-  switch (kindOf(p)) {
-    case 'creature': return creature(card, p);
-    case 'vehicle': return vehicle(card, p);
-    case 'planeswalker': return planeswalker(card, p);
-    case 'battle': return battle(card, p);
-    case 'land': return land(card, p);
-    case 'equipment': return equipment(card, p, true);
-    case 'artifact': return equipment(card, p, false);
-    case 'enchantment': return enchantment(card, p);
-    default: return spell(card, p, 'spell');
-  }
+/**
+ * @param art Optional hints from a caption of the card's artwork. Without them the entry comes
+ * from card data alone; with them, what the art shows refines body, vehicle kind, habitat, size,
+ * colouring and themes.
+ */
+export function generateDexEntry(card: DexInput, art: ArtHints | null = null): DexEntry {
+  const p = parse(card, art);
+  const e = (() => {
+    switch (kindOf(p)) {
+      case 'creature': return creature(card, p);
+      case 'vehicle': return vehicle(card, p);
+      case 'planeswalker': return planeswalker(card, p);
+      case 'battle': return battle(card, p);
+      case 'land': return land(card, p);
+      case 'equipment': return equipment(card, p, true);
+      case 'artifact': return equipment(card, p, false);
+      case 'enchantment': return enchantment(card, p);
+      default: return spell(card, p, 'spell');
+    }
+  })();
+  return art ? withArt(e, card, art) : e;
+}
+
+function artScale(p: Parsed): number {
+  return p.art?.size === 'large' ? 1.2 : p.art?.size === 'small' ? 0.8 : 1;
+}
+
+/** Scenes that describe a place, in the order we trust them for the habitat. */
+const PLACE_SCENES: SceneKey[] = ['water', 'forest', 'mountain', 'desert', 'ice', 'swamp', 'cave', 'grave', 'city', 'indoor', 'plains', 'sky'];
+
+const list = (ls: Loc[], max: number): Loc => {
+  const xs = ls.slice(0, max);
+  return L(xs.map((x) => x.de).join(', '), xs.map((x) => x.en).join(', '));
+};
+
+function withArt(e: DexEntry, c: DexInput, art: ArtHints): DexEntry {
+  const r = (id: string) => rngFor(`${c.seed}|art|${id}`);
+  const place = PLACE_SCENES.find((s) => art.scenes.includes(s));
+  const habitat = place && e.kind !== 'spell' && e.kind !== 'planeswalker' ? habitatFor(SCENE_HABITAT[place], c.plane) : e.habitat;
+  const specs = [...e.specs];
+  if (art.subjects.length) specs.push(textStat('seen', L('Auf dem Bild', 'In the artwork'), list(art.subjects.map((x) => x.name), 3)));
+  if (art.colors.length) specs.push(textStat('coloring', L('Färbung', 'Colouring'), list(art.colors, 3)));
+  const funny = [...e.funny];
+  if (art.scenes.includes('fire')) funny.push(stat('fire', L('Brandgefahr', 'Fire hazard'), Math.round(r('fire').between(7, 10)), 'rating10'));
+  if (art.many) funny.push(textStat('pack', L('Auftreten', 'Seen'), L('Meist in Gruppen', 'Usually in groups')));
+  return { ...e, habitat, specs, funny };
 }

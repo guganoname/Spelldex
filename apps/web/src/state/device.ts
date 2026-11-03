@@ -26,13 +26,15 @@ interface Prefs {
   audioSession: 'ambient' | 'playback';
   /** iPhone: 'hybrid' adds coded tick patterns, 'tap' only the element tick */
   iosHaptics: 'hybrid' | 'tap';
+  /** Optional in-browser AI that captions card art to refine the dex entry (off by default). */
+  artAi: boolean;
 }
 
 const initialLang = detectLanguage();
 const DEFAULT_PREFS: Prefs = {
   sound: true, haptics: true, volume: 0.8, reducedMotion: null, shell: null,
   uiLanguage: initialLang, cardLanguage: initialLang,
-  audioSession: 'ambient', iosHaptics: 'hybrid',
+  audioSession: 'ambient', iosHaptics: 'hybrid', artAi: false,
 };
 
 interface DeviceState {

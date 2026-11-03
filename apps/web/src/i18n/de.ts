@@ -184,6 +184,21 @@ export const de = {
   'scan.noCamera': 'Keine passende Kamera gefunden.',
   'scan.busy': 'Die Kamera wird gerade von einer anderen App benutzt.',
   'scan.failed': 'Die Linse lässt sich nicht öffnen: {msg}',
+  'dex.title': 'Dex-Eintrag',
+  'dex.habitat': 'Lebensraum',
+  'dex.funny': 'Kuriose Werte',
+  'dex.note': 'Spelldex-Schätzung aus Typ, Stärke, Fähigkeiten und Flavor-Text der Karte. Zum Spaß, keine offizielle Lore.',
+  'dex.noteAi': 'Spelldex-Schätzung aus den Kartendaten, verfeinert mit einer KI-Bildbeschreibung des Artworks (läuft auf diesem Gerät). Zum Spaß, keine offizielle Lore.',
+  'dex.aiLooking': 'KI betrachtet das Artwork …',
+  'dex.aiLoading': 'KI-Modell wird geladen: {pct} %',
+  'dex.aiFailed': 'KI-Bildbeschreibung nicht möglich, Werte nur aus Kartendaten.',
+  'dex.aiCaption': 'Was die KI sieht (englisch)',
+  'settings.artAi': 'KI-Bildanalyse für Dex-Werte',
+  'settings.artAiHint': 'Ein offenes KI-Modell (Florence-2) beschreibt das Artwork direkt auf deinem Gerät, damit die Dex-Werte zum Bild passen. Kostenlos, ohne Konto. Einmaliger Download von etwa {mb} MB. Jede Karte wird nur einmal angesehen und das Ergebnis gespeichert; ohne WebGPU kann das bis zu einer Minute dauern.',
+  'settings.artAiLoading': 'Modell wird geladen: {pct} %',
+  'settings.artAiReady': 'Bereit ({device}).',
+  'settings.artAiError': 'Laden fehlgeschlagen: {msg}',
+  'settings.artAiDelete': 'KI-Modell vom Gerät löschen',
 } as const;
 
 export type MessageKey = keyof typeof de;

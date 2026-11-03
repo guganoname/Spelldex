@@ -45,7 +45,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,wasm,woff2,svg,png,glb,ktx2}'],
-        globIgnores: ['data/**', '**/opencv*', '**/tesseract*'],
+        // The optional artwork AI (worker + ONNX runtime, ~30 MB) loads only when turned on.
+        globIgnores: ['data/**', '**/opencv*', '**/tesseract*', '**/caption.worker*', '**/ort-wasm*', '**/ort.*'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/\/data\//],
@@ -64,6 +65,13 @@ export default defineConfig({
             urlPattern: ({ url }) => url.origin === 'https://svgs.scryfall.io',
             handler: 'CacheFirst',
             options: { cacheName: 'scryfall-symbols', expiration: { maxAgeSeconds: 60 * 60 * 24 * 90 } },
+          },
+          {
+            // Artwork AI: worker and ONNX runtime from our origin. The model files themselves come
+            // from the Hugging Face CDN and are cached by transformers.js in its own cache.
+            urlPattern: ({ url }) => /\/assets\/(caption\.worker|ort[-.])[^/]*$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: { cacheName: 'art-ai-engine' },
           },
           {
             // Scanner engines: the OpenCV.js asset (fetched by the scan worker) and Tesseract files.
