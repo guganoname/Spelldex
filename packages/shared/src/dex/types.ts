@@ -12,7 +12,9 @@ export type DexLang = 'de' | 'en';
  */
 export type DexUnit =
   | 'm' | 'kg' | 'kmh' | 'knots' | 'hp' | 'kw' | 'celsius' | 'years' | 'hours' | 'seconds'
-  | 'km2' | 'db' | 'liters' | 'percent' | 'rating10' | 'stars' | 'count' | 'mana' | 'newton' | 'lumen';
+  | 'km2' | 'db' | 'liters' | 'percent' | 'rating10' | 'stars' | 'count' | 'mana' | 'newton' | 'lumen'
+  | 'km' | 'mm' | 'kj' | 'bpm' | 'cubicm' | 'kv' | 'minutes' | 'permille' | 'decimal' | 'richter' | 'gcm3' | 'mg' | 'ml' | 'ms'
+  | 'kcal' | 'hz' | 'manam3' | 'generations' | 'ppm' | 'hpmin';
 
 export interface DexStat {
   /** Stable key, e.g. "height", "horsepower". */
@@ -38,6 +40,8 @@ export interface DexEntry {
   funny: DexStat[];
   /** Short background paragraph composed from templates. */
   entry: Loc;
+  /** Theme ids that chose the stats, strongest first (fire, noble, machine, ...). */
+  themes?: string[];
 }
 
 /** Minimal card data the generator needs; built from CardDetail with `dexInputFromCard`. */

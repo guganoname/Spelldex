@@ -87,6 +87,41 @@ describe('dex entry', () => {
   });
 });
 
+describe('card-specific themes', () => {
+  const ids = (e: ReturnType<typeof card>) => [...e.specs, ...e.funny].map((s) => s.id);
+
+  it('picks fire stats for a fire elemental and noble stats for a baron', () => {
+    const fire = card({ name: 'Fire Elemental', typeLine: 'Creature — Elemental', power: '5', toughness: '4', colors: ['R'], flavorText: 'It burns with the heat of a thousand flames.' });
+    expect(fire.themes?.[0]).toBe('fire');
+    expect(ids(fire)).toContain('burnTemp');
+    const baron = card({ name: 'Baron Sengir', typeLine: 'Legendary Creature — Human Vampire', power: '5', toughness: '5', colors: ['B'], keywords: ['Flying'] });
+    expect(baron.themes).toContain('noble');
+    expect(ids(baron)).toContain('rank');
+  });
+
+  it('gives different cards different stat sets, not just different numbers', () => {
+    const island = card({ name: 'Island', typeLine: 'Basic Land — Island', power: null, toughness: null, colors: [] });
+    const bolt = card({ name: 'Lightning Bolt', typeLine: 'Instant', power: null, toughness: null, colors: ['R'], oracleText: 'Lightning Bolt deals 3 damage to any target.' });
+    expect(ids(island)).toContain('salinity');
+    expect(ids(bolt)).toContain('voltage');
+    expect(ids(island)).not.toContain('voltage');
+    expect(ids(bolt)).not.toContain('salinity');
+  });
+
+  it('never pads a spell with travel or machine stats and always fills the page', () => {
+    for (const o of [
+      { name: 'Counterspell', typeLine: 'Instant', colors: ['U'] as const, oracleText: 'Counter target spell.' },
+      { name: 'Act of Authority', typeLine: 'Enchantment', colors: ['W'] as const, oracleText: 'When this enchantment enters, you may exile target artifact or enchantment.' },
+      { name: 'Mysterious Egg', typeLine: 'Creature — Egg', colors: [] as const, power: '0', toughness: '2' },
+    ]) {
+      const e = card({ power: null, toughness: null, ...o, colors: [...o.colors] });
+      expect(e.specs.length).toBeGreaterThanOrEqual(8);
+      if (o.typeLine === 'Instant') expect(e.themes).not.toContain('travel');
+      expect(ids(e)).not.toContain('gears');
+    }
+  });
+});
+
 describe('artwork hints', () => {
   const ratchetCaption = 'A cartoon image of a van. The van is gray with a red stripe down the middle. There are black wheels on the van. There appears to be smoke coming out of the van and the ground. There looks to be a tree trunk on the right side of the image.';
 

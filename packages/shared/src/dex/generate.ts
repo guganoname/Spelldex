@@ -10,6 +10,7 @@ import {
   BODIES, COLOR_ADJ, COLOR_HABITAT, COLOR_MOOD, JOBS, LIFESPAN, SNACKS, type Body, type BodyPlan,
 } from './tables.ts';
 import { SCENE_HABITAT, type ArtHints, type SceneKey } from './art.ts';
+import { COLOR_THEME, THEMES, type StatDef, type Theme, type ThemeCtx } from './themes.ts';
 import type { DexEntry, DexInput, DexKind, DexStat, DexUnit, Loc } from './types.ts';
 
 // --- deterministic randomness -----------------------------------------------------------------
@@ -161,27 +162,12 @@ const KEYWORD_LINES: [string, Loc][] = [
   ['living metal', L('Verwandelt sich auf Wunsch in etwas ganz anderes.', 'Transforms into something else entirely on request.')],
 ];
 
-const THEMES: [RegExp, Loc][] = [
-  [/\b(fire|flame|burn|blaze|ember|inferno)/i, L('Hinterlässt gern verbrannte Erde.', 'Tends to leave scorched earth behind.')],
-  [/\b(ice|frost|snow|cold|freez)/i, L('Bringt eisige Luft mit, egal zu welcher Jahreszeit.', 'Brings an icy chill in any season.')],
-  [/\b(sea|ocean|wave|tide|deep|water)/i, L('Riecht immer ein wenig nach Salzwasser.', 'Always smells faintly of salt water.')],
-  [/\b(night|moon|dark|shadow)/i, L('Wird vor allem nach Sonnenuntergang aktiv.', 'Most active after sunset.')],
-  [/\b(storm|lightning|thunder)/i, L('Kündigt sich oft mit Donnergrollen an.', 'Often announced by a rumble of thunder.')],
-  [/\b(gold|treasure|coin|wealth)/i, L('Hat eine Schwäche für alles, was glänzt.', 'Has a weakness for anything shiny.')],
-  [/\b(song|sing|music|melod)/i, L('Summt bei der Arbeit leise vor sich hin.', 'Hums quietly while it works.')],
-  [/\b(hunger|hungry|feast|devour|eat)/i, L('Ist eigentlich immer hungrig.', 'Is basically always hungry.')],
-  [/\b(dream|sleep)/i, L('Taucht gern in fremden Träumen auf.', "Likes to show up in other people's dreams.")],
-  [/\b(war|battle|army|legion)/i, L('Kennt das Schlachtfeld besser als das eigene Bett.', 'Knows the battlefield better than its own bed.')],
-];
-
 function sentences(p: Parsed, max: number): Loc[] {
   const out: Loc[] = [];
   for (const [k, line] of KEYWORD_LINES) {
     if (out.length >= max) break;
     if (p.has(k) && !out.includes(line)) out.push(line);
   }
-  const theme = THEMES.find(([re]) => re.test(p.art?.caption ?? '') || re.test(p.flavor) || re.test(p.text));
-  if (theme) out.push(theme[1]);
   return out;
 }
 
@@ -193,7 +179,8 @@ function rarityLine(c: DexInput, p: Parsed): Loc {
 }
 
 function join(...parts: (Loc | null)[]): Loc {
-  const ps = parts.filter((x): x is Loc => x != null);
+  // Sentences can come from several places (keywords, themes); say each one once.
+  const ps = parts.filter((x): x is Loc => x != null).filter((x, i, all) => all.findIndex((y) => y.en.includes(x.en)) === i);
   return L(ps.map((x) => x.de).join(' '), ps.map((x) => x.en).join(' '));
 }
 
@@ -634,7 +621,172 @@ export function generateDexEntry(card: DexInput, art: ArtHints | null = null): D
       default: return spell(card, p, 'spell');
     }
   })();
-  return art ? withArt(e, card, art) : e;
+  const themed = applyThemes(e, card, p);
+  return art ? withArt(themed, card, art) : themed;
+}
+
+// --- themes: which stats fit this card --------------------------------------------------------
+
+/** Stats from the kind functions that stay; everything else comes from the card's themes. */
+const CORE: Record<DexKind, string[]> = {
+  creature: ['height', 'weight', 'wingspan', 'breath', 'heads', 'legs', 'transparency', 'material', 'job'],
+  vehicle: ['horsepower', 'speed', 'accel', 'weight', 'crew', 'ceiling', 'draft'],
+  planeswalker: ['height', 'age', 'spark', 'home'],
+  land: ['area', 'altitude', 'temp', 'yield'],
+  spell: ['cast', 'mana', 'radius', 'damage'],
+  enchantment: ['aura', 'duration', 'chapters'],
+  equipment: ['weight', 'length', 'bonus', 'equip', 'material'],
+  artifact: ['weight', 'size', 'material'],
+  battle: ['front', 'troops', 'duration', 'front-plane'],
+};
+const CORE_FUNNY = new Set(['danger', 'cuddle', 'sighting', 'transform']);
+
+/** Stats that measure the same thing; only the first one of a group is shown. */
+const SAME: Record<string, string> = {
+  wingspan: 'wingspan', speed: 'speed', topSpeed: 'speed', runSpeed: 'speed', flightSpeed: 'speed', swim: 'speed', marchSpeed: 'speed',
+  horsepower: 'power', power: 'power', powerOut: 'power', ceiling: 'ceiling', accel: 'accel',
+  breath: 'temp', burnTemp: 'temp', coreTemp: 'temp', bodyTempDead: 'temp', temp: 'temp',
+  age: 'age', timeAge: 'age', radius: 'radius', heatRadius: 'radius', frostRadius: 'radius', blastRadiusG: 'radius', aura: 'radius', auraRange: 'radius',
+  danger: 'danger', fireHazard: 'danger', cuddle: 'cuddle', cuddleEld: 'cuddle', touchability: 'cuddle',
+  material: 'material', brightness: 'glow', glow: 'glow', troops: 'troops', patience: 'patience', patienceLow: 'patience',
+};
+const groupOf = (id: string) => SAME[id] ?? id;
+
+/** Theme hints from the type line that the words alone would miss. */
+const TYPE_THEMES: [RegExp, string, number][] = [
+  [/\bArtifact\b/, 'machine', 4], [/\bVehicle\b|\bSpacecraft\b/, 'vehicle', 9], [/\bEquipment\b/, 'military', 3],
+  [/\bMountain\b/, 'earth', 4], [/\bIsland\b/, 'sea', 4], [/\bSwamp\b/, 'death', 3], [/\bForest\b/, 'nature', 4], [/\bPlains\b/, 'light', 3],
+  [/\bPlaneswalker\b/, 'travel', 3], [/\bSaga\b/, 'time', 3], [/\bBattle\b/, 'military', 5], [/\bInstant\b|\bSorcery\b/, 'mana', 1],
+  [/\bAura\b/, 'mana', 2], [/\bCave\b/, 'earth', 4], [/\bDesert\b/, 'fire', 2], [/\bTown\b/, 'noble', 3], [/\bGate\b/, 'military', 3],
+  [/\b(Dragon|Phoenix|Hellion)\b/, 'fire', 3], [/\b(Angel|Cleric|Monk)\b/, 'light', 3], [/\b(Wizard|Sphinx|Advisor)\b/, 'mind', 3],
+  [/\b(Zombie|Skeleton|Spirit)\b/, 'death', 3], [/\bVampire\b/, 'blood', 4], [/\b(Merfolk|Fish|Kraken|Leviathan|Serpent)\b/, 'sea', 3],
+  [/\bGoblin\b/, 'goblin', 4], [/\bDwarf\b/, 'craft', 4], [/\bPirate\b/, 'pirate', 4], [/\b(Demon|Devil)\b/, 'demon', 4], [/\bNoble\b/, 'noble', 4],
+  [/\b(Knight|Soldier|Warrior)\b/, 'military', 3], [/\b(Elf|Treefolk|Dryad|Druid)\b/, 'nature', 3], [/\bFaerie\b/, 'faerie', 4],
+  [/\b(Eldrazi|Horror|Phyrexian)\b/, 'eldritch', 3], [/\b(Fungus|Saproling)\b/, 'fungus', 4],
+  [/\bLesson\b/, 'mind', 4], [/\bAdventure\b/, 'travel', 2], [/\bRoom\b/, 'shadow', 2], [/\bFood\b/, 'hunger', 5], [/\bTreasure\b/, 'pirate', 3],
+];
+
+function scoreThemes(c: DexInput, p: Parsed, kind: DexKind): { theme: Theme; score: number }[] {
+  const fields: [string, number][] = [
+    [c.name, 5],
+    [c.typeLine, 4],
+    [p.text.replace(/\([^)]*\)/g, ''), 2.5],
+    [p.flavor, 2],
+    [p.art?.caption ?? '', 4],
+    [c.keywords.join(' '), 2],
+  ];
+  const tie = rngFor(`${c.seed}|themes`);
+  return THEMES.map((theme) => {
+    const re = new RegExp(theme.re.source, 'gi');
+    let score = 0;
+    for (const [text, w] of fields) {
+      if (!text) continue;
+      const hits = new Set((text.match(re) ?? []).map((m) => m.toLowerCase())).size;
+      score += w * Math.min(3, hits);
+    }
+    for (const [re2, id, w] of TYPE_THEMES) if (id === theme.id && re2.test(c.typeLine)) score += w;
+    for (const col of fallbackColors(c, kind)) if (COLOR_THEME[col] === theme.id) score += 1.5;
+    if (theme.id === 'vehicle' && kind !== 'vehicle') score *= 0.3;
+    if (theme.kinds && !theme.kinds.includes(kind)) score = 0;
+    return { theme, score: score > 0 ? score + tie.next() * 0.9 : 0 };
+  }).filter((x) => x.score > 0).sort((a, b) => b.score - a.score);
+}
+
+/** Colours that hint at a theme; colourless only means "machine" for artifacts. */
+function fallbackColors(c: DexInput, kind: DexKind): string[] {
+  if (c.colors.length) return c.colors;
+  if (/\bArtifact\b/.test(c.typeLine)) return ['colorless'];
+  if (kind === 'land') return [];
+  return ['void'];
+}
+
+function themeCtx(c: DexInput, p: Parsed, kind: DexKind): ThemeCtx {
+  const s = sizeScore(c);
+  const pw = num(c.power) ?? Math.max(0, Math.round(c.manaValue * 0.8));
+  const tg = num(c.toughness) ?? num(c.defense) ?? num(c.loyalty) ?? Math.max(1, c.manaValue);
+  return {
+    kind, name: c.name, s: Math.max(0, s), mv: c.manaValue, pw, tg, legendary: p.legendary, rarity: c.rarity, text: p.text,
+    types: c.typeLine, being: kind === 'creature' || kind === 'planeswalker',
+    r: (id) => rngFor(`${c.seed}|t|${id}`),
+    num: (re) => {
+      const m = re.exec(p.text);
+      if (!m) return null;
+      return /^x$/i.test(m[1] ?? '') ? c.manaValue : Number(m[1]) || null;
+    },
+  };
+}
+
+function evalStat(d: StatDef, ctx: ThemeCtx): DexStat {
+  if (d.unit === 'text') return textStat(d.id, d.label, d.t(ctx));
+  const v = d.v(ctx);
+  const value = !Number.isFinite(v) ? 0 : Math.abs(v) >= 100 ? Math.round(sig(v, 3)) : sig(v, 3);
+  return stat(d.id, d.label, value, d.unit);
+}
+
+/** Picks n stats from a theme, in a per-card order, skipping groups already shown. */
+function takeStats(defs: StatDef[], n: number, ctx: ThemeCtx, seen: Set<string>, seed: string): DexStat[] {
+  const r = rngFor(seed);
+  const order = defs.map((d) => [r.next(), d] as const).sort((a, b) => a[0] - b[0]).map(([, d]) => d);
+  const out: DexStat[] = [];
+  for (const d of order) {
+    if (out.length >= n) break;
+    if (seen.has(groupOf(d.id)) || (d.when && !d.when(ctx))) continue;
+    seen.add(groupOf(d.id));
+    out.push(evalStat(d, ctx));
+  }
+  return out;
+}
+
+function applyThemes(e: DexEntry, c: DexInput, p: Parsed): DexEntry {
+  const ctx = themeCtx(c, p, e.kind);
+  let ranked = scoreThemes(c, p, e.kind);
+  if (!ranked.length) {
+    const id = COLOR_THEME[fallbackColors(c, e.kind)[0] ?? 'land'] ?? 'mana';
+    ranked = [{ theme: THEMES.find((t) => t.id === id)!, score: 1 }];
+  }
+  const top = ranked.slice(0, 3).filter((x, i) => i === 0 || x.score >= 3);
+  // Fill up with the colour theme so every card has at least two themes to draw from.
+  if (top.length < 2) {
+    const fb = fallbackColors(c, e.kind);
+    const id = COLOR_THEME[fb[1] ?? fb[0] ?? 'land'] ?? 'mana';
+    const extra = ranked[1]?.theme
+      ?? THEMES.find((t) => t.id === id && !top.some((x) => x.theme.id === t.id))
+      ?? THEMES.find((t) => t.id === 'mana' && !top.some((x) => x.theme.id === 'mana'))!;
+    top.push({ theme: extra, score: 1 });
+  }
+
+  const seen = new Set<string>();
+  const core = e.specs.filter((s) => CORE[e.kind].includes(s.id) && s.text?.en !== 'Unknown' && !seen.has(groupOf(s.id)) && (seen.add(groupOf(s.id)), true));
+  const quota = [3, 2, 2];
+  const specs = [...core];
+  top.forEach(({ theme }, i) => specs.push(...takeStats(theme.stats, quota[i]!, ctx, seen, `${c.seed}|ts|${theme.id}`)));
+  // Not every theme stat fits every card (a tail length for an Aura?): top up from the next
+  // themes, then the colour themes, so each card ends up with a full page.
+  const want = core.length + 7;
+  // Colour themes of the card, then plain magic. Travel only fits
+  // lands and machine only fits artifacts, so they never pad a spell.
+  const own: string[] = fallbackColors(c, e.kind);
+  const pads = [...own, ...(own.includes('void') || own.includes('colorless') ? [] : ['mana']), 'time', 'mind', ...(e.kind === 'land' ? ['land'] : []), ...(c.typeLine.includes('Artifact') ? ['colorless'] : [])];
+  const more = [...ranked.slice(top.length).map((x) => x.theme), ...pads.map((col) => THEMES.find((t) => t.id === (COLOR_THEME[col] ?? col)))];
+  for (const theme of [...top.map((x) => x.theme), ...more]) {
+    if (specs.length >= want) break;
+    if (!theme) continue;
+    specs.push(...takeStats(theme.stats, want - specs.length, ctx, seen, `${c.seed}|ts2|${theme.id}`));
+  }
+
+  const funnySeen = new Set<string>();
+  const funny = e.funny.filter((s) => CORE_FUNNY.has(s.id) && !funnySeen.has(groupOf(s.id)) && (funnySeen.add(groupOf(s.id)), true));
+  top.slice(0, 2).forEach(({ theme }) => funny.push(...takeStats(theme.funny, 1, ctx, funnySeen, `${c.seed}|tf|${theme.id}`)));
+  const [first, second] = top;
+  const r = (id: string) => rngFor(`${c.seed}|tx|${id}`);
+  funny.push(textStat('hobby', L('Hobby', 'Hobby'), r('hobby').pick(first!.theme.hobby)));
+  funny.push(textStat('fear', L('Größte Angst', 'Greatest fear'), r('fear').pick((second ?? first)!.theme.fear)));
+  funny.push(textStat('snack', L('Lieblingssnack', 'Favourite snack'), r('snack').pick(first!.theme.snack)));
+
+  const names = top.map((x) => x.theme.name);
+  const element = L(`Element: ${names.map((n) => n.de).join(', ')}.`, `Element: ${names.map((n) => n.en).join(', ')}.`);
+  const entry = join(e.entry, first!.theme.line, element);
+  return { ...e, specs, funny, entry, themes: top.map((x) => x.theme.id) };
 }
 
 function artScale(p: Parsed): number {

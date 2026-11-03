@@ -39,6 +39,26 @@ export function formatDexStat(s: DexStat, lang: DexLang, locale = LOCALE[lang]):
     case 'mana': return `${n(v, 2)} Mana`;
     case 'newton': return `${int(v)} N`;
     case 'lumen': return `${int(v)} lm`;
+    case 'km': return `${n(v)} km`;
+    case 'mm': return `${n(v)} mm`;
+    case 'kj': return v >= 1000 ? `${n(v / 1000)} MJ` : `${n(v)} kJ`;
+    case 'bpm': return `${int(v)} ${de ? 'Schläge/min' : 'bpm'}`;
+    case 'cubicm': return `${n(v)} m³`;
+    case 'kv': return `${n(v)} kV`;
+    case 'minutes': return `${n(v, 2)} min`;
+    case 'permille': return `${n(v, 2)} ‰`;
+    case 'decimal': return n(v, 2);
+    case 'richter': return `${n(v, 2)} ${de ? 'auf der Richterskala' : 'on the Richter scale'}`;
+    case 'gcm3': return `${n(v, 2)} g/cm³`;
+    case 'mg': return v >= 1000 ? `${n(v / 1000)} g` : `${n(v)} mg`;
+    case 'ml': return v >= 1000 ? `${n(v / 1000)} l` : `${n(v)} ml`;
+    case 'ms': return `${int(v)} ms`;
+    case 'kcal': return `${int(v)} kcal`;
+    case 'hz': return `${int(v)} Hz`;
+    case 'manam3': return `${n(v, 2)} Mana/m³`;
+    case 'generations': return `${int(v)} ${de ? 'Generationen' : 'generations'}`;
+    case 'ppm': return `${int(v)} ppm`;
+    case 'hpmin': return `${n(v, 2)} ${de ? 'LP/min' : 'HP/min'}`;
     default: return int(v);
   }
 }
