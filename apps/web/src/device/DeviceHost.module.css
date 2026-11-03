@@ -1,0 +1,56 @@
+/* Above both shells (and above the iOS haptics switch inside the 3D stage). */
+.openHint {
+  position: fixed;
+  z-index: 10;
+  left: 50%;
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 6px));
+  translate: -50% 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px 16px;
+  border: 0;
+  background: none;
+  color: rgb(233 217 168 / 0.72);
+  font-family: var(--sd-font-ui);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-align: center;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 0.8);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 500ms ease-out, translate 500ms ease-out;
+}
+.openHint[data-visible] { opacity: 1; translate: -50% 0; pointer-events: auto; }
+.openHint svg {
+  width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+  animation: nudge 1.8s ease-in-out infinite;
+}
+@keyframes nudge { 0%, 100% { transform: translateY(2px); } 50% { transform: translateY(-3px); } }
+
+.notice {
+  position: fixed;
+  z-index: 10;
+  top: max(10px, env(safe-area-inset-top));
+  left: 50%;
+  translate: -50% 0;
+  width: min(92vw, 420px);
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgb(20 16 22 / 0.92);
+  border: 1px solid rgb(233 217 168 / 0.25);
+  color: var(--sd-screen-ink);
+  font-family: var(--sd-font-ui);
+  font-size: 14px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .openHint, .openHint svg { transition: none; animation: none; }
+}

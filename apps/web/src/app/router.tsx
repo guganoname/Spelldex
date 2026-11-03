@@ -2,10 +2,12 @@
 import {
   createRootRoute, createRoute, createRouter, lazyRouteComponent, Outlet, useNavigate, useRouter,
 } from '@tanstack/react-router';
-import { ENTRY_TABS, type EntryTab } from '@spelldex/shared/contracts';
+import { ENTRY_TABS, type DeviceButton, type EntryTab } from '@spelldex/shared/contracts';
 import { DeviceHost } from '../device/DeviceHost.tsx';
-import { useDeviceButton } from '../state/device.ts';
+import { emitButton, useDeviceButton, useDeviceStore } from '../state/device.ts';
 import { HomeScreen } from '../screens/HomeScreen.tsx';
+import { ErrorScreen, NotFoundScreen, clearChunkReloadFlag } from '../screens/ErrorScreen.tsx';
+import { useEffect } from 'react';
 
 function Root() {
   const navigate = useNavigate();
@@ -19,6 +21,11 @@ function Root() {
     } else return false;
     return true;
   });
+  useKeyboardButtons();
+  useEffect(() => {
+    const id = setTimeout(clearChunkReloadFlag, 10_000);
+    return () => clearTimeout(id);
+  }, []);
   return (
     <>
       <DeviceHost />
@@ -27,7 +34,39 @@ function Root() {
   );
 }
 
-const rootRoute = createRootRoute({ component: Root });
+/**
+ * Desktop and hardware keyboards: arrows are the d-pad, Escape is back, "/" opens the search.
+ * Ignored while typing in a field (arrows move the caret there).
+ */
+const KEYS: Record<string, DeviceButton> = {
+  ArrowUp: 'dpad-up', ArrowDown: 'dpad-down', ArrowLeft: 'dpad-left', ArrowRight: 'dpad-right',
+  Escape: 'back', '/': 'search',
+};
+function useKeyboardButtons() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      const el = e.target as HTMLElement | null;
+      const typing = !!el?.closest?.('input, textarea, select, [contenteditable="true"]');
+      if (typing && e.key !== 'Escape') return;
+      const b = KEYS[e.key];
+      if (!b) return;
+      if (typing) el!.blur();
+      e.preventDefault();
+      const { open, setOpen } = useDeviceStore.getState();
+      // A closed Codex opens with any key first.
+      if (!open) {
+        if (b !== 'back') setOpen(true);
+        return;
+      }
+      emitButton(b);
+    };
+    addEventListener('keydown', onKey);
+    return () => removeEventListener('keydown', onKey);
+  }, []);
+}
+
+const rootRoute = createRootRoute({ component: Root, notFoundComponent: NotFoundScreen });
 
 const homeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: HomeScreen });
 
@@ -85,6 +124,7 @@ export const router = createRouter({
   routeTree,
   basepath: import.meta.env.BASE_URL,
   defaultPreload: 'intent',
+  defaultErrorComponent: ErrorScreen,
   scrollRestoration: true,
 });
 

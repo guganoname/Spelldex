@@ -3,14 +3,69 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-    <meta name="theme-color" content="#2b1d16" />
+    <meta name="theme-color" content="#0b0a0d" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Spelldex: a Pokédex for Magic cards. Scan, look up and collect, offline." />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
     <title>Spelldex</title>
+    <!--
+      Boot splash: plain HTML and inline CSS, painted before any script runs. It covers everything
+      until the device shell has drawn its first frame (closed), so no half-loaded or fallback
+      version of the device is ever visible. Removed by src/app/splash.ts.
+    -->
+    <style>
+      html, body { margin: 0; height: 100%; background: #0b0a0d; }
+      #boot {
+        position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center;
+        background: radial-gradient(120% 80% at 30% 10%, #2a2230, #0b0a0d 70%);
+        transition: opacity 420ms ease-out;
+        font-family: Georgia, serif; color: #c9b98f;
+      }
+      #boot[data-done] { opacity: 0; pointer-events: none; }
+      #boot .b-wrap { display: grid; justify-items: center; gap: 22px; }
+      #boot .b-seal {
+        width: 92px; height: 92px; border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #f6dc9a, #b98a3c 45%, #5c3f17 100%);
+        box-shadow: 0 0 0 3px #3a2812, 0 10px 30px rgb(0 0 0 / 0.7), 0 0 40px rgb(242 200 107 / 0.25);
+        display: grid; place-items: center;
+      }
+      #boot .b-rune {
+        width: 54px; height: 54px; border-radius: 50%;
+        border: 2px solid rgb(58 40 18 / 0.75); border-top-color: #fff3c9;
+        animation: b-spin 1.4s linear infinite;
+      }
+      #boot .b-title { margin: 0; font-size: 15px; letter-spacing: 0.5em; padding-left: 0.5em; color: #b98a3c; }
+      #boot .b-text { margin: 0; font-size: 13px; letter-spacing: 0.06em; color: #8c806a; min-height: 1.2em; }
+      #boot noscript { color: #c9b98f; font-size: 14px; }
+      @keyframes b-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) { #boot .b-rune { animation-duration: 4s; } #boot { transition: none; } }
+    </style>
   </head>
   <body>
+    <div id="boot" role="status" aria-live="polite">
+      <div class="b-wrap">
+        <div class="b-seal" aria-hidden="true"><div class="b-rune"></div></div>
+        <p class="b-title">SPELLDEX</p>
+        <p class="b-text" id="boot-text"></p>
+        <noscript>Spelldex needs JavaScript. / Spelldex braucht JavaScript.</noscript>
+      </div>
+    </div>
+    <script>
+      // Language for the splash before the app (and its store) has loaded.
+      (function () {
+        var lang = 'en';
+        try {
+          var p = JSON.parse(localStorage.getItem('spelldex-device') || '{}').state;
+          p = p && p.prefs;
+          lang = p ? (p.uiLanguage || 'de') : /^de/i.test(navigator.language || '') ? 'de' : 'en';
+        } catch (e) {}
+        document.documentElement.lang = lang;
+        document.getElementById('boot-text').textContent = lang === 'de' ? 'Der Codex erwacht …' : 'The Codex awakens …';
+      })();
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

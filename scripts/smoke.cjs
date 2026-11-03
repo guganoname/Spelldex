@@ -16,21 +16,40 @@ const out = process.argv[3] ?? '.';
     await p.addInitScript((s) => localStorage.getItem('spelldex-device') || localStorage.setItem('spelldex-device', JSON.stringify({
       state: { open: false, prefs: { sound: false, haptics: false, volume: 0.8, reducedMotion: null, shell: s, cardLanguage: 'de' } }, version: 0,
     })), shell === '3d' ? null : '2d');
+    // Every start begins closed; the boot splash covers the page until the shell has drawn its
+    // first frame. Open with a real click: the hint for 3D, the seal for 2D (forced: Playwright's
+    // hit test misreads the folded, 3D-transformed 2D lid, a real click at the seal works).
+    const boot = async (url) => {
+      await p.goto(url);
+      await p.waitForSelector('#boot', { state: 'detached', timeout: 20000 });
+      if (shell === '3d') await p.click('[data-open-hint]', { timeout: 15000, noWaitAfter: true });
+      else await p.click('button[aria-label="Spelldex öffnen"]', { force: true, noWaitAfter: true });
+      await p.waitForTimeout(1500);
+    };
     await p.goto(base);
-    await p.waitForTimeout(3000);
+    await p.waitForSelector('#boot', { state: 'detached', timeout: 20000 });
+    await p.waitForTimeout(500);
     await p.screenshot({ path: `${out}/${shell}-1-closed.png` });
-    await p.evaluate(() => [...document.querySelectorAll('button')].find((b) => /Spelldex öffnen/.test(b.textContent + (b.getAttribute('aria-label') ?? ''))).click());
-    await p.waitForTimeout(2500);
+    const closed = await p.evaluate(() => !!document.querySelector('[data-open-hint]') || !document.querySelector('[data-open]') && !document.querySelector('canvas'));
+    if (!closed) errors.push(`${shell}: device did not start closed`);
+    await boot(base);
     await p.screenshot({ path: `${out}/${shell}-2-open.png` });
-    await p.goto(`${base}suche?q=blitz`);
+    await boot(`${base}suche?q=blitz`);
     await p.waitForSelector('text=Blitzschlag', { timeout: 15000 });
     await p.screenshot({ path: `${out}/${shell}-3-search.png` });
     await p.click('text=Blitzschlag');
     await p.waitForSelector('text=Spontanzauber', { timeout: 10000 });
     await p.screenshot({ path: `${out}/${shell}-4-card.png` });
-    await p.goto(`${base}sammlung`);
+    await boot(`${base}sammlung`);
     await p.waitForSelector('text=Alle Karten', { timeout: 10000 });
     await p.screenshot({ path: `${out}/${shell}-5-collection.png` });
+    // Language switch on the start screen: interface and card texts change together.
+    await boot(base);
+    await p.click('[data-screen=bottom] >> role=radio[name="EN"]', { timeout: 10000 });
+    await p.waitForSelector('[data-screen=bottom] >> text=Settings', { timeout: 5000 });
+    if ((await p.getAttribute('html', 'lang')) !== 'en') errors.push(`${shell}: html lang not switched`);
+    await p.screenshot({ path: `${out}/${shell}-6-english.png` });
+    await p.click('[data-screen=bottom] >> role=radio[name="DE"]');
     await p.close();
   };
   // iPhone: real taps (not programmatic clicks) on the screens, reading mode and scrolling. Catches
@@ -43,6 +62,9 @@ const out = process.argv[3] ?? '.';
       state: { open: true, prefs: { sound: false, haptics: true, volume: 0.8, reducedMotion: null, shell: null, cardLanguage: 'de' } }, version: 0,
     })));
     await p.goto(base);
+    await p.waitForSelector('#boot', { state: 'detached', timeout: 20000 });
+    await p.tap('[data-open-hint]', { timeout: 15000, noWaitAfter: true });
+    await p.waitForTimeout(1500);
     await p.tap('[data-screen=bottom] >> text=Suchen', { timeout: 15000 });
     await p.waitForURL(/suche/, { timeout: 5000 });
     await p.fill('input[type=search]', 'blitz');

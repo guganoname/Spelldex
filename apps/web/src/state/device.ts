@@ -6,6 +6,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { useEffect, useRef } from 'react';
 import type { CatalogStatus, ColorAccent, DeviceButton, GemIndex } from '@spelldex/shared/contracts';
+import { detectLanguage, type Lang } from '../i18n/detect.ts';
 
 export type ShellKind = '3d' | '2d';
 
@@ -17,20 +18,26 @@ interface Prefs {
   reducedMotion: boolean | null;
   /** null = decide by GPU capability */
   shell: ShellKind | null;
-  cardLanguage: 'de' | 'en';
+  /** Interface language. */
+  uiLanguage: Lang;
+  /** Card names and texts: German where the catalog has them, else English. */
+  cardLanguage: Lang;
   /** 'ambient' respects the iPhone mute switch, 'playback' plays anyway */
   audioSession: 'ambient' | 'playback';
   /** iPhone: 'hybrid' adds coded tick patterns, 'tap' only the element tick */
   iosHaptics: 'hybrid' | 'tap';
 }
 
+const initialLang = detectLanguage();
 const DEFAULT_PREFS: Prefs = {
-  sound: true, haptics: true, volume: 0.8, reducedMotion: null, shell: null, cardLanguage: 'de',
+  sound: true, haptics: true, volume: 0.8, reducedMotion: null, shell: null,
+  uiLanguage: initialLang, cardLanguage: initialLang,
   audioSession: 'ambient', iosHaptics: 'hybrid',
 };
 
 interface DeviceState {
-  /** Lid target: true = open. The shell animates towards it with a spring. */
+  /** Lid target: true = open. The shell animates towards it with a spring. Every start begins
+   * closed (not persisted): opening the Codex is the first gesture, like a real Pokédex. */
   open: boolean;
   /** Set by the shell when the lid comes to rest, 0 (closed) or 1 (open). Not per frame: every
    * store write also persists to localStorage, which stutters the lid on phones. */
@@ -76,12 +83,19 @@ export const useDeviceStore = create<DeviceState>()(
     {
       name: 'spelldex-device',
       storage: createJSONStorage(() => localStorage),
-      // From the second start the device opens in its last state.
-      partialize: (s) => ({ prefs: s.prefs, open: s.open, reading: s.reading }),
-      // Stored prefs from older versions lack newer fields; keep the defaults for those.
+      partialize: (s) => ({ prefs: s.prefs, reading: s.reading }),
+      // Stored prefs from older versions lack newer fields; keep the defaults for those. Older
+      // versions also stored `open`: ignored, the device always starts closed.
       merge: (stored, current) => {
-        const p = (stored ?? {}) as Partial<Pick<DeviceState, 'prefs' | 'open' | 'reading'>>;
-        return { ...current, ...p, prefs: { ...current.prefs, ...p.prefs } };
+        const p = (stored ?? {}) as Partial<Pick<DeviceState, 'prefs' | 'reading'>>;
+        const prefs = { ...current.prefs, ...p.prefs };
+        // Users from before the language setting chose their card language explicitly; the
+        // interface was German for them, so keep it German.
+        if (p.prefs && !p.prefs.uiLanguage) {
+          prefs.uiLanguage = 'de';
+          prefs.cardLanguage = p.prefs.cardLanguage ?? 'de';
+        }
+        return { ...current, reading: p.reading ?? current.reading, prefs };
       },
     },
   ),
