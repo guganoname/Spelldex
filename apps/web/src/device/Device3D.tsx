@@ -194,7 +194,7 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
       layoutRef.current = measure(camera, size);
       setLayout(layoutRef.current);
     }
-    const o = layoutRef.current;
+    const o = layoutRef.current!;
     camera.updateMatrixWorld();
     const rects = codex.getScreenRects(camera, size);
     const fade = Math.min(1, Math.max(0, (codex.t - SCREEN_VISIBLE_FROM) / SCREEN_FADE));
