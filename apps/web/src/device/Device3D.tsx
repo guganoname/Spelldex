@@ -23,6 +23,8 @@ import css from './Device3D.module.css';
 const SCREEN_VISIBLE_FROM = 0.82;
 /** The screens fade in over this much lid progress instead of popping in. */
 const SCREEN_FADE = 0.12;
+/** The reading-mode grip only shows on a (practically) fully open lid. */
+const GRIP_VISIBLE_FROM = 0.995;
 /** Reading mode: the info screen widens to the viewport, below the lens, at most this wide. */
 const READING_MAX_WIDTH = 640;
 const READING_MARGIN = 8;
@@ -131,6 +133,7 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
   const wrapper = useRef<HTMLDivElement>(null);
   const topEl = useRef<HTMLDivElement>(null);
   const bottomEl = useRef<HTMLDivElement>(null);
+  const gripEl = useRef<HTMLButtonElement>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const [layout, setLayout] = useState<Layout | null>(null);
   const layoutRef = useRef<Layout | null>(null);
@@ -141,6 +144,7 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
   readingRef.current = readingActive;
   // Stable ref callbacks (inline ones would re-register the slots on every render).
   const setWrapper = useCallback((el: HTMLDivElement | null) => { wrapper.current = el; hapticTarget(el); }, []);
+  const gripRef = useCallback((el: HTMLButtonElement | null) => { gripEl.current = el; hapticTarget(el); }, []);
 
   useEffect(() => codex.setActiveTab(activeGem ?? -1), [codex, activeGem]);
 
@@ -181,7 +185,11 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
   // Stable, so the render loop in <Scene> is not torn down on every render of this component.
   const onFrame = useCallback((camera: THREE.PerspectiveCamera, size: { width: number; height: number }) => {
     cameraRef.current = camera;
-    if (needsMeasure.current || !layoutRef.current) {
+    // Also when the canvas size changed since the last measurement: on a rotation the window's
+    // resize event can fire before the canvas has its new size, and a measurement taken in between
+    // would leave the screens aligned to the old orientation.
+    const prev = layoutRef.current;
+    if (needsMeasure.current || !prev || prev.vw !== size.width || prev.vh !== size.height) {
       needsMeasure.current = false;
       layoutRef.current = measure(camera, size);
       setLayout(layoutRef.current);
@@ -197,12 +205,21 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
       el.style.opacity = fade < 1 ? String(fade) : '';
       // In reading mode the info screen is laid out by CSS, not glued to the device.
       if (docked) return;
-      el.style.transform = q.axisAligned
-        ? `translate(${q.rect.left - box.left}px, ${q.rect.top - box.top}px)`
-        : quadToMatrix3d(box.width, box.height, q.corners.map((p) => ({ x: p.x - box.left, y: p.y - box.top })));
+      if (q.axisAligned) {
+        // The camera reframes while the lid moves, so a flat screen also changes size: scale it
+        // too, or it stays at its open-pose size (too big, shifted) until the lid settles.
+        const sx = q.rect.width / box.width;
+        const sy = q.rect.height / box.height;
+        const scaled = Math.abs(sx - 1) > 0.001 || Math.abs(sy - 1) > 0.001;
+        el.style.transform = `translate(${q.rect.left - box.left}px, ${q.rect.top - box.top}px)${scaled ? ` scale(${sx}, ${sy})` : ''}`;
+        return;
+      }
+      el.style.transform = quadToMatrix3d(box.width, box.height, q.corners.map((p) => ({ x: p.x - box.left, y: p.y - box.top })));
     };
     place(topEl.current, rects.top, o.top, false);
     place(bottomEl.current, rects.bottom, o.bottom, readingRef.current);
+    // The grip sits outside the screens and would show through the closing lid: only fully open.
+    if (gripEl.current) gripEl.current.style.visibility = codex.t >= GRIP_VISIBLE_FROM ? 'visible' : 'hidden';
   }, [codex, measure]);
 
   // Re-measure on resize (rotation, toolbars, keyboard) without unmounting the screens: their
@@ -333,9 +350,13 @@ export default function Device3D({ reducedMotion, onFail }: { reducedMotion: boo
               type="button"
               className={css.grip}
               data-screen="grip"
-              style={{ left: layout.bottom.left + layout.bottom.width / 2, top: layout.bottom.top }}
+              ref={gripRef}
+              style={{
+                left: layout.bottom.left + layout.bottom.width / 2,
+                top: layout.bottom.top,
+                visibility: progress.get() >= GRIP_VISIBLE_FROM ? 'visible' : 'hidden',
+              }}
               aria-label={t('device.readingOpen')}
-              ref={hapticTarget}
               onClick={() => setReadingAnimated(true)}
             >
               <svg viewBox="0 0 24 24" aria-hidden><path d="M6 15l6-6 6 6" /></svg>

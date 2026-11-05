@@ -25,10 +25,19 @@
   border: 1px solid rgb(233 217 168 / 0.35); background: rgb(0 0 0 / 0.45);
 }
 .openButton { position: relative; justify-self: center; min-height: 44px; padding: 10px 22px; font-size: 16px; font-family: var(--sd-font-display); letter-spacing: 0.04em; }
-.hud { z-index: 2; position: absolute; left: 10px; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
+.hud { z-index: 2; position: absolute; left: 62px; right: 10px; bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 8px; pointer-events: none; }
 .hud > * { pointer-events: auto; }
 .hint { font-size: 13px; padding: 4px 10px; border-radius: 999px; background: rgb(0 0 0 / 0.55); color: var(--sd-screen-ink); }
 .torch { position: relative; margin-left: auto; min-height: 36px; padding: 6px 14px; font-size: 14px; }
 .torch[aria-pressed='true'] { border-color: var(--sd-rune-glow, #f2c86b); background: rgb(242 200 107 / 0.2); }
 .candidates { z-index: 2; position: absolute; left: 10px; right: 10px; top: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
 .candidates button { position: relative; min-height: 36px; padding: 6px 14px; font-size: 14px; }
+/* Home key, bottom left of the lens (above veil and HUD). */
+.homeButton {
+  z-index: 3; position: absolute; left: 10px; bottom: 10px; width: 44px; height: 44px;
+  display: grid; place-items: center; border-radius: 999px;
+  border: 1px solid rgb(233 217 168 / 0.35); background: rgb(0 0 0 / 0.55); color: var(--sd-screen-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+.homeButton:active { background: rgb(242 200 107 / 0.2); }
+.homeButton svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
