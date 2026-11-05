@@ -77,20 +77,88 @@ function guardWorker<T>(worker: Worker, p: Promise<T>): Promise<T> {
   });
 }
 
+/**
+ * The worker (OpenCV + scan index, several seconds to load) outlives a single lens session:
+ * leaving the scan screen and coming back reuses it, so recognition is ready at once.
+ * It is terminated after WORKER_IDLE_MS without a lens, to give the memory back.
+ */
+const WORKER_IDLE_MS = 90_000;
+
+interface SharedWorker {
+  worker: Worker;
+  api: Comlink.Remote<ScanWorkerApi>;
+  key: string;
+  ready: Promise<unknown>;
+  users: number;
+  idle: ReturnType<typeof setTimeout> | null;
+}
+let shared: SharedWorker | null = null;
+
+function dropShared(w: SharedWorker) {
+  if (w.idle) clearTimeout(w.idle);
+  if (shared === w) shared = null;
+  w.api[Comlink.releaseProxy]();
+  w.worker.terminate();
+}
+
+function acquireWorker(opts: ScanInitOptions): SharedWorker {
+  const key = `${opts.indexUrl}|${opts.ocr ? 1 : 0}`;
+  if (shared && shared.key !== key && shared.users === 0) dropShared(shared);
+  if (shared && shared.key === key) {
+    if (shared.idle) clearTimeout(shared.idle);
+    shared.idle = null;
+    shared.users++;
+    void shared.api.reset();
+    return shared;
+  }
+  const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'scan' });
+  const api = Comlink.wrap<ScanWorkerApi>(worker);
+  const w: SharedWorker = { worker, api, key, ready: Promise.resolve(), users: 1, idle: null };
+  w.ready = guardWorker(worker, api.init({ indexUrl: opts.indexUrl, ocr: opts.ocr }));
+  // A failed load must not be reused: the next lens starts a fresh worker.
+  w.ready.catch(() => { if (shared === w) shared = null; });
+  shared = w;
+  return w;
+}
+
+function releaseWorker(w: SharedWorker) {
+  w.users = Math.max(0, w.users - 1);
+  if (w.users > 0) return;
+  if (shared !== w) {
+    dropShared(w);
+    return;
+  }
+  w.idle = setTimeout(() => dropShared(w), WORKER_IDLE_MS);
+}
+
 export async function startCameraScan(opts: CameraScanOptions): Promise<CameraScan> {
   // Camera first, synchronously inside the user's tap; worker init (OpenCV + index download)
   // runs in parallel, and the picture shows as soon as the camera delivers.
   const streamPromise = openCamera();
-  const worker =
-    opts.worker ?? new Worker(new URL('./worker.ts', import.meta.url), { type: 'module', name: 'scan' });
-  const api = Comlink.wrap<ScanWorkerApi>(worker);
-  const ready = guardWorker(worker, api.init({ indexUrl: opts.indexUrl, ocr: opts.ocr }));
+  let api: Comlink.Remote<ScanWorkerApi>;
+  let ready: Promise<unknown>;
+  let disposeWorker: () => void;
+  if (opts.worker) {
+    const worker = opts.worker;
+    api = Comlink.wrap<ScanWorkerApi>(worker);
+    ready = guardWorker(worker, api.init({ indexUrl: opts.indexUrl, ocr: opts.ocr }));
+    disposeWorker = () => api[Comlink.releaseProxy]();
+  } else {
+    const w = acquireWorker(opts);
+    api = w.api;
+    ready = w.ready;
+    let released = false;
+    disposeWorker = () => {
+      if (released) return;
+      released = true;
+      releaseWorker(w);
+    };
+  }
   ready.catch(() => {}); // handled below; avoids an unhandled rejection if the camera fails first
 
   const dispose = (stream?: MediaStream) => {
     stream?.getTracks().forEach((t) => t.stop());
-    api[Comlink.releaseProxy]();
-    if (!opts.worker) worker.terminate();
+    disposeWorker();
   };
 
   let stream: MediaStream;
@@ -163,8 +231,7 @@ export async function startCameraScan(opts: CameraScanOptions): Promise<CameraSc
       running = false;
       stream.getTracks().forEach((t) => t.stop());
       video.srcObject = null;
-      api[Comlink.releaseProxy]();
-      if (!opts.worker) worker.terminate();
+      disposeWorker();
     },
   };
 }

@@ -4,7 +4,7 @@
  * number lookup stays as fallback (no camera, no scan index in this data build).
  */
 import { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { feedback, hapticTarget } from '@spelldex/design/feedback';
 import type { Rarity } from '@spelldex/design/feedback';
 import type { ScanMatch } from '@spelldex/shared/contracts';
@@ -15,6 +15,7 @@ import { useManifest, useMarkSeen } from '../data/hooks.ts';
 import { CatalogGate } from './common.tsx';
 import { ScanLens } from './ScanLens.tsx';
 import css from './screen.module.css';
+import scanCss from './scan.module.css';
 import { useI18n } from '../i18n/index.ts';
 
 export function ScanScreen() {
@@ -71,6 +72,10 @@ export function ScanScreen() {
             <p className={css.muted}>{t('scan.noIndex')}</p>
           </div>
         )}
+        {/* Home is otherwise only reachable through back presses: one tap, bottom left of the lens. */}
+        <Link to="/" className={scanCss.homeButton} ref={hapticTarget} aria-label={t('common.home')} title={t('common.home')} onClick={() => feedback('back')}>
+          <svg viewBox="0 0 24 24" aria-hidden><path d="M4 11.5 12 4l8 7.5M6.5 9.5V20h4v-5.5h3V20h4V9.5" /></svg>
+        </Link>
       </TopScreen>
       <BottomScreen>
         <CatalogGate>

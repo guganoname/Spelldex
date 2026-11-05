@@ -34,7 +34,23 @@ export function hapticsEnabled() {
  */
 export function hapticTarget(el: HTMLElement | null | undefined): void {
   if (!el || !isIOS) return;
+  if (!el.isConnected) {
+    // Portals may attach a moment later; decide once the element is in the page.
+    requestAnimationFrame(() => { if (el.isConnected) hapticTarget(el); });
+    return;
+  }
+  // The native switch takes over a drag that starts on it, so a list or tab bar could only be
+  // scrolled between its buttons. Inside a scroll area the tick comes from code (feedback()).
+  if (insideScroller(el)) return;
   hapticTrigger(el);
+}
+
+function insideScroller(el: HTMLElement): boolean {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const s = getComputedStyle(p);
+    if (/auto|scroll/.test(s.overflowX) || /auto|scroll/.test(s.overflowY)) return true;
+  }
+  return false;
 }
 
 export function vibrate(pattern: number | number[]): boolean {
@@ -56,6 +72,8 @@ export type IosHapticMode = "tap" | "hybrid";
 
 let iosMode: IosHapticMode = "hybrid";
 let lastGesture = -Infinity;
+/** The last press landed on an ios-haptics switch, which ticks by itself. */
+let pressOnSwitch = false;
 let tracking = false;
 /** So lange nach der letzten Berührung darf der Code noch ticken */
 const ACTIVATION_MS = 1000;
@@ -65,6 +83,11 @@ function trackGestures() {
   tracking = true;
   const mark = () => (lastGesture = performance.now());
   for (const t of ["pointerup", "touchend", "click", "keydown"]) document.addEventListener(t, mark, { capture: true, passive: true });
+  document.addEventListener(
+    "pointerdown",
+    (e) => { pressOnSwitch = !!(e.target as Element | null)?.closest?.("[data-haptic-trigger]"); },
+    { capture: true, passive: true },
+  );
 }
 trackGestures();
 
@@ -120,7 +143,13 @@ export function iosPatternProgrammatic(delaysMs: number[]): void {
  * Element, also nur die weiteren. Ohne frische Nutzeraktion passiert nichts.
  */
 export function iosPlayPattern(pattern: number[], fromTap: boolean): void {
-  if (!isIOS || !enabled || iosMode !== "hybrid" || !withinActivation()) return;
-  const delays = fromTap ? pattern.filter((d) => d > 0) : pattern;
+  if (!isIOS || !enabled || !withinActivation()) return;
+  // A tap on an element without switch (inside a scroll area) still gets its first tick, by code.
+  const ticked = fromTap && pressOnSwitch;
+  if (iosMode !== "hybrid") {
+    if (fromTap && !ticked) iosTickProgrammatic();
+    return;
+  }
+  const delays = ticked ? pattern.filter((d) => d > 0) : pattern;
   if (delays.length) iosPatternProgrammatic(delays);
 }

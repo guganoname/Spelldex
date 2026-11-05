@@ -7,7 +7,7 @@ const base = process.argv[2] ?? 'http://localhost:4173/';
 const out = process.argv[3] ?? '.';
 
 (async () => {
-  const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  const browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const errors = [];
   const run = async (shell) => {
     const p = await browser.newPage({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2 });
@@ -55,7 +55,7 @@ const out = process.argv[3] ?? '.';
   // iPhone: real taps (not programmatic clicks) on the screens, reading mode and scrolling. Catches
   // anything stacked above the screens, such as the iOS haptics switch, which only exists here.
   const runIos = async () => {
-    const ctx = await browser.newContext({ ...devices['iPhone 13'] });
+    const ctx = await browser.newContext({ ...devices['iPhone 13'], permissions: ['camera'] });
     const p = await ctx.newPage();
     p.on('pageerror', (e) => errors.push(`ios: ${e.message}`));
     await p.addInitScript(() => localStorage.getItem('spelldex-device') || localStorage.setItem('spelldex-device', JSON.stringify({
@@ -74,6 +74,30 @@ const out = process.argv[3] ?? '.';
     await p.screenshot({ path: `${out}/ios-card-reading.png` });
     const scrolled = await p.$eval('[data-screen=bottom] > div:last-child', (el) => { el.scrollTop = 200; return el.scrollTop; });
     if (!(scrolled > 0)) errors.push('ios: info screen does not scroll');
+    // The haptics switch takes over drags that start on it: nothing inside a scrolling screen
+    // (tab bar, start tiles) may carry one, or swiping on a button would not scroll.
+    const inScroller = await p.$$eval('[data-haptic-trigger]', (els) => els.filter((el) => {
+      for (let n = el.parentElement?.parentElement; n && n !== document.body; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        if (/auto|scroll/.test(s.overflowX + s.overflowY)) return true;
+      }
+      return false;
+    }).length);
+    if (inScroller) errors.push(`ios: ${inScroller} haptic switch(es) inside scrolling screens`);
+    // Scan: an allowed camera starts by itself, without the "open lens" button; home key goes home.
+    await p.tap('[data-screen=bottom] button[aria-label="Zurück"]').catch(() => {});
+    await p.goto(`${base}scan`);
+    await p.waitForSelector('#boot', { state: 'detached', timeout: 20000 });
+    await p.tap('[data-open-hint]', { timeout: 15000, noWaitAfter: true }).catch(() => {});
+    await p.waitForTimeout(2500);
+    const lens = await p.evaluate(() => {
+      const v = document.querySelector('[data-screen=top] video');
+      return { hasLens: !!v, live: !!v?.srcObject, button: !!document.querySelector('[data-screen=top] button[class*=openButton]') };
+    });
+    if (lens.hasLens && (!lens.live || lens.button)) errors.push(`ios: camera did not start by itself ${JSON.stringify(lens)}`);
+    await p.screenshot({ path: `${out}/ios-scan.png` });
+    await p.tap('[data-screen=top] a[aria-label="Zur Startseite"]', { timeout: 5000 });
+    await p.waitForURL((u) => !/scan/.test(u.pathname), { timeout: 5000 });
     await ctx.close();
   };
   try {

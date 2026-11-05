@@ -1,9 +1,12 @@
 /**
  * The lens: camera view with the card outline locking on, driven by @spelldex/scanner.
- * The camera starts only after a real tap (permission prompt + audio/haptics unlock).
+ * The camera starts by itself when the browser already allows it (and the Codex is open); only when
+ * the phone still has to ask for permission does the lens show a button, because iOS ties the
+ * prompt to a real tap.
  * Results are turned into feedback events by scanFeedback(); hits and picks go to onPick.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useDeviceStore } from '../state/device.ts';
 import { feedback, hapticTarget, unlockFeedback } from '@spelldex/design/feedback';
 import { initialScanFeedback, scanFeedback, type ScanFeedbackState } from '@spelldex/scanner';
 import { CameraUnavailableError, startCameraScan, type CameraScan } from '@spelldex/scanner/camera';
@@ -17,8 +20,12 @@ interface Props {
   onPick: (match: ScanMatch, via: 'hit' | 'pick') => void;
 }
 
-/** starting: waiting for the camera permission; loading: picture live, recognition still loading. */
-type Phase = 'idle' | 'starting' | 'loading' | 'running' | 'error';
+/**
+ * checking: asking the browser whether the camera is already allowed (no button yet, so an allowed
+ * camera never flashes a prompt); idle: permission needed, button shown; starting: waiting for the
+ * camera; loading: picture live, recognition still loading.
+ */
+type Phase = 'checking' | 'idle' | 'starting' | 'loading' | 'running' | 'error';
 
 export function ScanLens({ indexUrl, onPick }: Props) {
   const video = useRef<HTMLVideoElement>(null);
@@ -26,12 +33,14 @@ export function ScanLens({ indexUrl, onPick }: Props) {
   const fb = useRef<ScanFeedbackState>(initialScanFeedback(0));
   const onPickRef = useRef(onPick);
   onPickRef.current = onPick;
-  const [phase, setPhase] = useState<Phase>('idle');
+  const [phase, setPhase] = useState<Phase>('checking');
   const [error, setError] = useState<string | null>(null);
   const [frame, setFrame] = useState<ScanFrameResult | null>(null);
   const [candidates, setCandidates] = useState<ScanMatch[] | null>(null);
   const [hint, setHint] = useState(false);
   const [torch, setTorch] = useState(false);
+  /** The current start came from the button (show its waiting state), not from the auto start. */
+  const [manual, setManual] = useState(false);
   const { t } = useI18n();
 
   const mounted = useRef(true);
@@ -48,9 +57,13 @@ export function ScanLens({ indexUrl, onPick }: Props) {
   }, []);
 
   // No await before startCameraScan: the camera request has to stay inside the tap on iOS.
-  const open = async () => {
-    if (phase === 'starting' || phase === 'loading') return;
-    void unlockFeedback();
+  // auto: started without a tap. A refusal then only means "needs a tap", not an error.
+  const busy = useRef(false);
+  const open = async (auto = false) => {
+    if (busy.current || scan.current) return;
+    busy.current = true;
+    if (!auto) void unlockFeedback();
+    setManual(!auto);
     feedback('scan-open');
     setPhase('starting');
     setError(null);
@@ -82,11 +95,49 @@ export function ScanLens({ indexUrl, onPick }: Props) {
       setPhase('running');
     } catch (e) {
       if (!mounted.current) return;
+      // Only a refused permission falls back to the button; anything else is a real error.
+      if (auto && e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
+        setPhase('idle');
+        return;
+      }
       feedback('error');
       setPhase('error');
       setError(cameraError(e, t));
+    } finally {
+      busy.current = false;
     }
   };
+  const openRef = useRef(open);
+  openRef.current = open;
+
+  // Start at once when the camera is already allowed: on entering the screen and when coming back
+  // after a scan. Waits for the open Codex (the app always starts closed).
+  const deviceOpen = useDeviceStore((s) => s.open);
+  useEffect(() => {
+    if (!deviceOpen) return;
+    let cancelled = false;
+    let status: PermissionStatus | null = null;
+    const onChange = () => { if (status?.state === 'granted' && !cancelled) void openRef.current(true); };
+    void cameraPermission().then((p) => {
+      if (cancelled || scan.current) return;
+      if (p.state === 'granted' || p.state === 'unknown') void openRef.current(true);
+      else {
+        setPhase((ph) => (ph === 'checking' ? 'idle' : ph));
+        if (p.state === 'denied') {
+          setPhase('error');
+          setError(t('scan.denied'));
+        }
+      }
+      // Allowed later (e.g. in the browser's site settings): start without another tap.
+      status = p.status;
+      status?.addEventListener('change', onChange);
+    });
+    return () => {
+      cancelled = true;
+      status?.removeEventListener('change', onChange);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [deviceOpen]);
 
   const toggleTorch = () => {
     const next = !torch;
@@ -115,12 +166,12 @@ export function ScanLens({ indexUrl, onPick }: Props) {
           <polygon className={css.quad} data-locked={locked} points={quad.map((p) => `${p.x},${p.y}`).join(' ')} />
         </svg>
       )}
-      {(phase === 'idle' || phase === 'starting' || phase === 'error') && (
+      {(phase === 'idle' || phase === 'error' || (phase === 'starting' && manual)) && (
         <div className={css.veil}>
           {phase === 'error'
             ? <p role="alert">{error}</p>
             : <p>{t('scan.intro')}</p>}
-          <button type="button" className={css.openButton} ref={hapticTarget} onClick={open} disabled={phase === 'starting'}>
+          <button type="button" className={css.openButton} ref={hapticTarget} onClick={() => void open()} disabled={phase === 'starting'}>
             {phase === 'starting' ? t('scan.waking') : phase === 'error' ? t('common.retry') : t('scan.open')}
           </button>
           {phase === 'starting' && <p className={css.small}>{t('scan.permission')}</p>}
@@ -152,6 +203,16 @@ export function ScanLens({ indexUrl, onPick }: Props) {
       )}
     </div>
   );
+}
+
+/** The browser's camera permission, where it can tell (Safari 16+, Chrome, Firefox). */
+async function cameraPermission(): Promise<{ state: PermissionState | 'unknown'; status: PermissionStatus | null }> {
+  try {
+    const status = await navigator.permissions.query({ name: 'camera' as PermissionName });
+    return { state: status.state, status };
+  } catch {
+    return { state: 'unknown', status: null };
+  }
 }
 
 function cameraError(e: unknown, t: I18n['t']): string {
