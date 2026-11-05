@@ -95,7 +95,8 @@ export function ScanLens({ indexUrl, onPick }: Props) {
       setPhase('running');
     } catch (e) {
       if (!mounted.current) return;
-      if (auto && !(e instanceof CameraUnavailableError)) {
+      // Only a refused permission falls back to the button; anything else is a real error.
+      if (auto && e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'SecurityError')) {
         setPhase('idle');
         return;
       }

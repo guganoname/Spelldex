@@ -76,7 +76,13 @@ const out = process.argv[3] ?? '.';
     if (!(scrolled > 0)) errors.push('ios: info screen does not scroll');
     // The haptics switch takes over drags that start on it: nothing inside a scrolling screen
     // (tab bar, start tiles) may carry one, or swiping on a button would not scroll.
-    const inScroller = await p.$$eval('[data-screen] [data-haptic-trigger]', (els) => els.length);
+    const inScroller = await p.$$eval('[data-haptic-trigger]', (els) => els.filter((el) => {
+      for (let n = el.parentElement?.parentElement; n && n !== document.body; n = n.parentElement) {
+        const s = getComputedStyle(n);
+        if (/auto|scroll/.test(s.overflowX + s.overflowY)) return true;
+      }
+      return false;
+    }).length);
     if (inScroller) errors.push(`ios: ${inScroller} haptic switch(es) inside scrolling screens`);
     // Scan: an allowed camera starts by itself, without the "open lens" button; home key goes home.
     await p.tap('[data-screen=bottom] button[aria-label="Zurück"]').catch(() => {});
